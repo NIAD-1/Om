@@ -6,44 +6,64 @@ import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { ArrowLeft, CheckCircle, Circle, Lock, ChevronRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 import type { Roadmap, RoadmapCurriculumRef } from '@/types/roadmap';
+import { useAuth } from '@/contexts/auth-context';
+import { getRoadmaps, getCurricula } from '@/lib/firestore';
 
 export default function RoadmapDetailPage() {
     const router = useRouter();
     const params = useParams();
     const roadmapId = params.id as string;
+    const { user } = useAuth();
 
     const [roadmap, setRoadmap] = useState<Roadmap | null>(null);
     const [curricula, setCurricula] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // Load roadmap
-        const roadmaps = JSON.parse(localStorage.getItem('roadmaps') || '[]');
-        const found = roadmaps.find((r: Roadmap) => r.id === roadmapId);
+        const loadRoadmap = async () => {
+            if (!user) {
+                setLoading(false);
+                return;
+            }
 
-        if (!found) {
-            router.push('/roadmaps');
-            return;
-        }
+            try {
+                // Load roadmaps from Firestore
+                const roadmaps = await getRoadmaps(user.uid);
+                const found = roadmaps.find((r: Roadmap) => r.id === roadmapId);
 
-        setRoadmap(found);
+                if (!found) {
+                    router.push('/roadmaps');
+                    return;
+                }
 
-        // Load full curriculum details
-        const allCurricula = JSON.parse(localStorage.getItem('curricula') || '[]');
-        const orderedCurricula = found.curricula
-            .sort((a: RoadmapCurriculumRef, b: RoadmapCurriculumRef) => a.order - b.order)
-            .map((ref: RoadmapCurriculumRef) => {
-                const curriculum = allCurricula.find((c: any) => c.id === ref.curriculumId);
-                return {
-                    ...curriculum,
-                    order: ref.order,
-                    locked: ref.locked,
-                    completed: found.completedCurricula.includes(ref.curriculumId),
-                };
-            })
-            .filter((c: any) => c.id); // Remove any not found
+                setRoadmap(found);
 
-        setCurricula(orderedCurricula);
-    }, [roadmapId, router]);
+                // Load full curriculum details from Firestore
+                const allCurricula = await getCurricula(user.uid);
+                const orderedCurricula = found.curricula
+                    .sort((a: RoadmapCurriculumRef, b: RoadmapCurriculumRef) => a.order - b.order)
+                    .map((ref: RoadmapCurriculumRef) => {
+                        const curriculum = allCurricula.find((c: any) => c.id === ref.curriculumId);
+                        return {
+                            ...curriculum,
+                            order: ref.order,
+                            locked: ref.locked,
+                            completed: found.completedCurricula.includes(ref.curriculumId),
+                        };
+                    })
+                    .filter((c: any) => c.id); // Remove any not found
+
+                setCurricula(orderedCurricula);
+            } catch (error) {
+                console.error('Failed to load roadmap', error);
+                router.push('/roadmaps');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        loadRoadmap();
+    }, [roadmapId, router, user]);
 
     const handleCurriculumClick = (curriculum: any) => {
         if (curriculum.locked) {
