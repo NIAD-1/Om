@@ -4,9 +4,12 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { ArrowLeft, Sparkles, Copy, Loader2 } from 'lucide-react';
+import { useAuth } from '@/contexts/auth-context';
+import { saveRoadmap, saveCurriculum } from '@/lib/firestore';
 
 export default function CreateRoadmapManualPage() {
     const router = useRouter();
+    const { user } = useAuth();
     const [jsonInput, setJsonInput] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
@@ -89,7 +92,7 @@ export default function CreateRoadmapManualPage() {
         setError('');
     };
 
-    const handleCreate = () => {
+    const handleCreate = async () => {
         setLoading(true);
         setError('');
 
@@ -128,10 +131,12 @@ export default function CreateRoadmapManualPage() {
                 });
             });
 
-            // Save curricula to localStorage
-            const existingCurricula = JSON.parse(localStorage.getItem('curricula') || '[]');
-            existingCurricula.push(...curricula);
-            localStorage.setItem('curricula', JSON.stringify(existingCurricula));
+            // Save curricula to Firestore
+            if (user) {
+                for (const curriculum of curricula) {
+                    await saveCurriculum(user.uid, curriculum);
+                }
+            }
 
             // Save roadmap
             const roadmap = {
@@ -144,9 +149,9 @@ export default function CreateRoadmapManualPage() {
                 completedCurricula: [],
             };
 
-            const existingRoadmaps = JSON.parse(localStorage.getItem('roadmaps') || '[]');
-            existingRoadmaps.push(roadmap);
-            localStorage.setItem('roadmaps', JSON.stringify(existingRoadmaps));
+            if (user) {
+                await saveRoadmap(user.uid, roadmap);
+            }
 
             router.push('/roadmaps');
         } catch (err) {

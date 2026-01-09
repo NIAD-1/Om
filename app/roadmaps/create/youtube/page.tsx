@@ -4,6 +4,8 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { ArrowLeft, Youtube, Loader2, Clock, Plus, Trash2 } from 'lucide-react';
+import { useAuth } from '@/contexts/auth-context';
+import { saveRoadmap, saveCurriculum } from '@/lib/firestore';
 
 interface TimestampSection {
     id: string;
@@ -15,6 +17,7 @@ interface TimestampSection {
 
 export default function CreateFromYouTubePage() {
     const router = useRouter();
+    const { user } = useAuth();
     const [videoUrl, setVideoUrl] = useState('');
     const [roadmapTitle, setRoadmapTitle] = useState('');
     const [domain, setDomain] = useState('technology');
@@ -176,10 +179,12 @@ export default function CreateFromYouTubePage() {
                 locked: false,
             });
 
-            // Save curricula
-            const existingCurricula = JSON.parse(localStorage.getItem('curricula') || '[]');
-            existingCurricula.push(...curricula);
-            localStorage.setItem('curricula', JSON.stringify(existingCurricula));
+            // Save curricula to Firestore
+            if (user) {
+                for (const curriculum of curricula) {
+                    await saveCurriculum(user.uid, curriculum);
+                }
+            }
 
             // Save roadmap
             const roadmap = {
@@ -192,9 +197,9 @@ export default function CreateFromYouTubePage() {
                 completedCurricula: [],
             };
 
-            const existingRoadmaps = JSON.parse(localStorage.getItem('roadmaps') || '[]');
-            existingRoadmaps.push(roadmap);
-            localStorage.setItem('roadmaps', JSON.stringify(existingRoadmaps));
+            if (user) {
+                await saveRoadmap(user.uid, roadmap);
+            }
 
             router.push(`/roadmaps/${roadmapId}`);
         } catch (error) {
