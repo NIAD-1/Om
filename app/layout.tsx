@@ -1,21 +1,22 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { Providers } from '@/components/providers';
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  themeColor: '#0f172a',
+};
 
 export const metadata: Metadata = {
   title: 'Mastery Engine - Personal Knowledge System',
   description: 'Master any field with AI-generated curricula, rigorous assessments, and personalized learning paths.',
   manifest: '/manifest.json',
-  themeColor: '#0f172a',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
     title: 'Mastery Engine',
-  },
-  viewport: {
-    width: 'device-width',
-    initialScale: 1,
-    maximumScale: 1,
   },
 };
 

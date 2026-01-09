@@ -1,10 +1,10 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { motion } from 'framer-motion';
-import { BookOpen, Calendar, Trash2, ChevronRight } from 'lucide-react';
+import { BookOpen, Calendar, Trash2, ChevronRight, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
 import { getCurricula, deleteCurriculum } from '@/lib/firestore';
 
@@ -16,7 +16,22 @@ interface SavedCurriculum {
   modules: any[];
 }
 
-export default function LearningPathsPage() {
+// Wrapper to handle Suspense requirement for useSearchParams
+export default function LearningPathsPageWrapper() {
+  return (
+    <Suspense fallback={
+      <DashboardLayout>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+        </div>
+      </DashboardLayout>
+    }>
+      <LearningPathsPage />
+    </Suspense>
+  );
+}
+
+function LearningPathsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const domainFilter = searchParams.get('domain');
