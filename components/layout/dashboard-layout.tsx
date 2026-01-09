@@ -75,6 +75,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                                     <Link
                                         key={item.name}
                                         href={item.href}
+                                        onClick={() => setIsSidebarOpen(false)}
                                         className={`flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition-all duration-200 group ${isActive
                                             ? 'bg-blue-600/10 text-blue-400 border border-blue-600/20'
                                             : 'text-slate-400 hover:bg-slate-800 hover:text-white'
