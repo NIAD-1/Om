@@ -3,13 +3,17 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
-import { BookOpen, Info } from 'lucide-react';
+import { BookOpen, Info, Loader2 } from 'lucide-react';
+import { useAuth } from '@/contexts/auth-context';
+import { saveCurriculum } from '@/lib/firestore';
 
 export default function CreateCurriculumPage() {
     const router = useRouter();
+    const { user } = useAuth();
     const [title, setTitle] = useState('');
     const [jsonInput, setJsonInput] = useState('');
     const [error, setError] = useState('');
+    const [loading, setLoading] = useState(false);
 
     const exampleFormat = `{
   "modules": [
@@ -57,11 +61,19 @@ export default function CreateCurriculumPage() {
   ]
 }`;
 
-    const handleSubmit = () => {
+    const handleSubmit = async () => {
         setError('');
+        setLoading(true);
 
         if (!title.trim()) {
             setError('Please enter a title');
+            setLoading(false);
+            return;
+        }
+
+        if (!user) {
+            setError('You must be logged in');
+            setLoading(false);
             return;
         }
 
@@ -79,15 +91,16 @@ export default function CreateCurriculumPage() {
                 id: curriculumId,
                 createdAt: timestamp,
                 field: title,
+                isRoadmapCurriculum: false, // Standalone curriculum
             };
 
-            const existing = JSON.parse(localStorage.getItem('curricula') || '[]');
-            existing.push(savedCurriculum);
-            localStorage.setItem('curricula', JSON.stringify(existing));
+            await saveCurriculum(user.uid, savedCurriculum);
 
             router.push(`/learning-paths/${curriculumId}`);
         } catch (e) {
             setError(e instanceof Error ? e.message : 'Invalid JSON format');
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -158,9 +171,14 @@ export default function CreateCurriculumPage() {
                 <div className="flex items-center gap-4">
                     <button
                         onClick={handleSubmit}
-                        className="px-6 py-3 rounded-lg bg-blue-500 hover:bg-blue-600 text-white font-medium transition-colors"
+                        disabled={loading}
+                        className="px-6 py-3 rounded-lg bg-blue-500 hover:bg-blue-600 disabled:opacity-50 text-white font-medium transition-colors flex items-center gap-2"
                     >
-                        Create Curriculum
+                        {loading ? (
+                            <><Loader2 className="h-5 w-5 animate-spin" /> Creating...</>
+                        ) : (
+                            'Create Curriculum'
+                        )}
                     </button>
                     <button
                         onClick={() => router.push('/learning-paths')}

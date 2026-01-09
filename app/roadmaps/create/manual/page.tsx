@@ -134,7 +134,10 @@ export default function CreateRoadmapManualPage() {
             // Save curricula to Firestore
             if (user) {
                 for (const curriculum of curricula) {
-                    await saveCurriculum(user.uid, curriculum);
+                    await saveCurriculum(user.uid, {
+                        ...curriculum,
+                        isRoadmapCurriculum: true,
+                    });
                 }
             }
 

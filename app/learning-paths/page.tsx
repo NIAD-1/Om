@@ -51,10 +51,13 @@ function LearningPathsPage() {
       try {
         const data = await getCurricula(user.uid);
 
+        // Filter out roadmap curricula (they belong to roadmaps, not standalone)
+        const standaloneCurricula = data.filter((c: any) => !c.isRoadmapCurriculum);
+
         // Filter by domain if specified
         const filtered = domainFilter
-          ? data.filter((c: SavedCurriculum) => (c.domain || 'technology') === domainFilter)
-          : data;
+          ? standaloneCurricula.filter((c: SavedCurriculum) => (c.domain || 'technology') === domainFilter)
+          : standaloneCurricula;
 
         setCurricula(filtered.reverse()); // Most recent first
       } catch (e) {
