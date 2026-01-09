@@ -11,9 +11,12 @@ import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { DOMAINS, ICON_MAP } from '@/lib/domains-config';
 import { generateCurriculum } from '@/lib/api-client';
 import { motion } from 'framer-motion';
+import { useAuth } from '@/contexts/auth-context';
+import { saveCurriculum } from '@/lib/firestore';
 
 export default function DashboardPage() {
     const router = useRouter();
+    const { user } = useAuth();
     const [isGenerating, setIsGenerating] = useState(false);
     const [selectedDomain, setSelectedDomain] = useState('technology');
     const [domainCards] = useState(DOMAINS);
@@ -49,7 +52,7 @@ export default function DashboardPage() {
             const curriculumId = crypto.randomUUID();
             const timestamp = new Date().toISOString();
 
-            // Save to array in localStorage (not overwriting)
+            // Save to Firestore
             const savedCurriculum = {
                 ...curriculum,
                 id: curriculumId,
@@ -58,9 +61,9 @@ export default function DashboardPage() {
                 domain: selectedDomain
             };
 
-            const existing = JSON.parse(localStorage.getItem('curricula') || '[]');
-            existing.push(savedCurriculum);
-            localStorage.setItem('curricula', JSON.stringify(existing));
+            if (user) {
+                await saveCurriculum(user.uid, savedCurriculum);
+            }
 
             console.log('Generated curriculum:', curriculum);
             router.push(`/learning-paths/${curriculumId}`);

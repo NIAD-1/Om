@@ -6,26 +6,45 @@ import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { motion } from 'framer-motion';
 import { Map, Plus, Calendar, Trash2, ChevronRight, Target } from 'lucide-react';
 import type { Roadmap } from '@/types/roadmap';
+import { useAuth } from '@/contexts/auth-context';
+import { getRoadmaps, deleteRoadmap } from '@/lib/firestore';
 
 export default function RoadmapsPage() {
     const router = useRouter();
+    const { user } = useAuth();
     const [roadmaps, setRoadmaps] = useState<Roadmap[]>([]);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const saved = localStorage.getItem('roadmaps');
-        if (saved) {
-            try {
-                setRoadmaps(JSON.parse(saved).reverse());
-            } catch (e) {
-                console.error('Failed to parse roadmaps', e);
+        const loadRoadmaps = async () => {
+            if (!user) {
+                setLoading(false);
+                return;
             }
-        }
-    }, []);
 
-    const deleteRoadmap = (id: string) => {
-        const updated = roadmaps.filter(r => r.id !== id);
-        localStorage.setItem('roadmaps', JSON.stringify(updated));
-        setRoadmaps(updated);
+            try {
+                const data = await getRoadmaps(user.uid);
+                setRoadmaps(data.reverse());
+            } catch (e) {
+                console.error('Failed to load roadmaps', e);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        loadRoadmaps();
+    }, [user]);
+
+    const handleDelete = async (id: string) => {
+        if (!user) return;
+
+        try {
+            await deleteRoadmap(user.uid, id);
+            const data = await getRoadmaps(user.uid);
+            setRoadmaps(data.reverse());
+        } catch (e) {
+            console.error('Failed to delete roadmap', e);
+        }
     };
 
     const getProgressPercentage = (roadmap: Roadmap) => {
@@ -119,7 +138,7 @@ export default function RoadmapsPage() {
                                                 onClick={(e) => {
                                                     e.stopPropagation();
                                                     if (confirm('Delete this roadmap?')) {
-                                                        deleteRoadmap(roadmap.id);
+                                                        handleDelete(roadmap.id);
                                                     }
                                                 }}
                                                 className="p-2 rounded-lg hover:bg-red-500/10 text-slate-400 hover:text-red-400 transition-colors"

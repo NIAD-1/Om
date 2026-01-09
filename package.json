@@ -27,6 +27,7 @@
     "uuid": "^11.0.4"
   },
   "devDependencies": {
+    "@netlify/plugin-nextjs": "^5.15.4",
     "@tailwindcss/postcss": "^4",
     "@types/katex": "^0.16.7",
     "@types/node": "^20",

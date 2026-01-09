@@ -5,45 +5,58 @@ import { useRouter, useParams } from 'next/navigation';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { ArrowLeft, Clock, BookOpen, ExternalLink } from 'lucide-react';
 import AITutorSidebar from '@/components/ai-tutor/ai-tutor-sidebar';
+import { useAuth } from '@/contexts/auth-context';
+import { getCurricula, saveProgress, getProgress } from '@/lib/firestore';
 
 export default function LessonPage() {
     const router = useRouter();
     const params = useParams();
     const curriculumId = params.id as string;
     const lessonId = params.lessonId as string;
+    const { user } = useAuth();
 
     const [lesson, setLesson] = useState<any>(null);
     const [curriculumTitle, setCurriculumTitle] = useState('');
 
     useEffect(() => {
-        const curricula = JSON.parse(localStorage.getItem('curricula') || '[]');
-        const curriculum = curricula.find((c: any) => c.id === curriculumId);
+        const loadLesson = async () => {
+            if (!user) return;
 
-        if (!curriculum) {
-            router.push('/learning-paths');
-            return;
-        }
+            try {
+                const curricula = await getCurricula(user.uid);
+                const curriculum = curricula.find((c: any) => c.id === curriculumId);
 
-        setCurriculumTitle(curriculum.field);
+                if (!curriculum) {
+                    router.push('/learning-paths');
+                    return;
+                }
 
-        // Find lesson
-        let foundLesson: any = null;
-        curriculum.modules?.forEach((module: any) => {
-            module.topics?.forEach((topic: any) => {
-                topic.lessons?.forEach((l: any) => {
-                    if (l.id === lessonId) {
-                        foundLesson = l;
-                    }
+                setCurriculumTitle(curriculum.field);
+
+                // Find lesson
+                let foundLesson: any = null;
+                curriculum.modules?.forEach((module: any) => {
+                    module.topics?.forEach((topic: any) => {
+                        topic.lessons?.forEach((l: any) => {
+                            if (l.id === lessonId) {
+                                foundLesson = l;
+                            }
+                        });
+                    });
                 });
-            });
-        });
 
-        if (foundLesson) {
-            setLesson(foundLesson);
-        } else {
-            router.push(`/learning-paths/${curriculumId}`);
-        }
-    }, [curriculumId, lessonId, router]);
+                if (foundLesson) {
+                    setLesson(foundLesson);
+                } else {
+                    router.push(`/learning-paths/${curriculumId}`);
+                }
+            } catch (error) {
+                console.error('Failed to load lesson', error);
+            }
+        };
+
+        loadLesson();
+    }, [curriculumId, lessonId, router, user]);
 
     if (!lesson) {
         return (
@@ -188,16 +201,20 @@ export default function LessonPage() {
                     </div>
                 )}
 
-                {/* Actions */}
                 <div className="flex items-center gap-4">
                     <button
-                        onClick={() => {
-                            const progressKey = `progress-${curriculumId}`;
-                            const existing = JSON.parse(localStorage.getItem(progressKey) || '[]');
-                            if (!existing.includes(lessonId)) {
-                                existing.push(lessonId);
-                                localStorage.setItem(progressKey, JSON.stringify(existing));
-                                alert('✅ Lesson marked as complete!');
+                        onClick={async () => {
+                            if (!user) return;
+
+                            try {
+                                const existing = await getProgress(user.uid, curriculumId);
+                                if (!existing.includes(lessonId)) {
+                                    existing.push(lessonId);
+                                    await saveProgress(user.uid, curriculumId, existing);
+                                    alert('✅ Lesson marked as complete!');
+                                }
+                            } catch (error) {
+                                console.error('Failed to save progress', error);
                             }
                         }}
                         className="px-6 py-3 rounded-lg bg-green-500 hover:bg-green-600 text-white font-medium transition-colors"

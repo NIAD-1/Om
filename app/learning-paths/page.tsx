@@ -5,6 +5,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { motion } from 'framer-motion';
 import { BookOpen, Calendar, Trash2, ChevronRight } from 'lucide-react';
+import { useAuth } from '@/contexts/auth-context';
+import { getCurricula, deleteCurriculum } from '@/lib/firestore';
 
 interface SavedCurriculum {
   id: string;
@@ -18,32 +20,37 @@ export default function LearningPathsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const domainFilter = searchParams.get('domain');
+  const { user } = useAuth();
 
   const [curricula, setCurricula] = useState<SavedCurriculum[]>([]);
+  const [loading, setLoading] = useState(true);
   const [showMigrationBanner, setShowMigrationBanner] = useState(false);
 
   useEffect(() => {
-    const saved = localStorage.getItem('curricula');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
+    const loadCurricula = async () => {
+      if (!user) {
+        setLoading(false);
+        return;
+      }
 
-        // Check if migration is needed
-        const needsMigration = parsed.some((c: SavedCurriculum) => !c.domain);
-        if (needsMigration && !localStorage.getItem('domains-migrated')) {
-          setShowMigrationBanner(true);
-        }
+      try {
+        const data = await getCurricula(user.uid);
 
         // Filter by domain if specified
         const filtered = domainFilter
-          ? parsed.filter((c: SavedCurriculum) => (c.domain || 'technology') === domainFilter)
-          : parsed;
+          ? data.filter((c: SavedCurriculum) => (c.domain || 'technology') === domainFilter)
+          : data;
+
         setCurricula(filtered.reverse()); // Most recent first
       } catch (e) {
-        console.error('Failed to parse curricula', e);
+        console.error('Failed to load curricula', e);
+      } finally {
+        setLoading(false);
       }
-    }
-  }, [domainFilter]);
+    };
+
+    loadCurricula();
+  }, [user, domainFilter]);
 
   const migrateDomains = () => {
     const curricula = JSON.parse(localStorage.getItem('curricula') || '[]');
@@ -77,13 +84,20 @@ export default function LearningPathsPage() {
     window.location.reload();
   };
 
-  const deleteCurriculum = (id: string) => {
-    const allCurricula = JSON.parse(localStorage.getItem('curricula') || '[]');
-    const updated = allCurricula.filter((c: SavedCurriculum) => c.id !== id);
-    localStorage.setItem('curricula', JSON.stringify(updated));
-    setCurricula(updated.filter((c: SavedCurriculum) =>
-      domainFilter ? c.domain === domainFilter : true
-    ).reverse());
+  const handleDelete = async (id: string) => {
+    if (!user) return;
+
+    try {
+      await deleteCurriculum(user.uid, id);
+      // Refresh list
+      const data = await getCurricula(user.uid);
+      const filtered = domainFilter
+        ? data.filter((c: SavedCurriculum) => (c.domain || 'technology') === domainFilter)
+        : data;
+      setCurricula(filtered.reverse());
+    } catch (e) {
+      console.error('Failed to delete curriculum', e);
+    }
   };
 
   const formatDate = (dateString: string) => {
@@ -194,7 +208,7 @@ export default function LearningPathsPage() {
                       onClick={(e) => {
                         e.stopPropagation();
                         if (confirm('Delete this curriculum?')) {
-                          deleteCurriculum(curriculum.id);
+                          handleDelete(curriculum.id);
                         }
                       }}
                       className="p-2 rounded-lg hover:bg-red-500/10 text-slate-400 hover:text-red-400 transition-colors"
