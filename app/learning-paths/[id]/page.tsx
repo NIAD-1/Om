@@ -14,39 +14,43 @@ import {
 } from 'lucide-react';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import type { Module, Topic, Lesson } from '@/types/curriculum';
+import { useAuth } from '@/contexts/auth-context';
+import { getCurricula } from '@/lib/firestore';
 
 export default function CurriculumViewPage() {
     const router = useRouter();
     const params = useParams();
     const id = params.id as string;
+    const { user } = useAuth();
 
     const [curriculum, setCurriculum] = useState<any>(null);
     const [expandedModules, setExpandedModules] = useState<Record<string, boolean>>({});
     const [expandedTopics, setExpandedTopics] = useState<Record<string, boolean>>({});
 
     useEffect(() => {
-        const saved = localStorage.getItem('curricula');
-        if (!saved) {
-            router.push('/learning-paths');
-            return;
-        }
-        try {
-            const all = JSON.parse(saved);
-            const found = all.find((c: any) => c.id === id);
-            if (!found) {
+        const loadCurriculum = async () => {
+            if (!user) return;
+
+            try {
+                const all = await getCurricula(user.uid);
+                const found = all.find((c: any) => c.id === id);
+                if (!found) {
+                    router.push('/learning-paths');
+                    return;
+                }
+                setCurriculum(found);
+                // Expand first module by default
+                if (found.modules && found.modules.length > 0) {
+                    setExpandedModules({ [found.modules[0].id]: true });
+                }
+            } catch (e) {
+                console.error('Failed to load curriculum', e);
                 router.push('/learning-paths');
-                return;
             }
-            setCurriculum(found);
-            // Expand first module by default
-            if (found.modules && found.modules.length > 0) {
-                setExpandedModules({ [found.modules[0].id]: true });
-            }
-        } catch (e) {
-            console.error('Failed to parse curriculum', e);
-            router.push('/learning-paths');
-        }
-    }, [id, router]);
+        };
+
+        loadCurriculum();
+    }, [id, router, user]);
 
     if (!curriculum) {
         return (
