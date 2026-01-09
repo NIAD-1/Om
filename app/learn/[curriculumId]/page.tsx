@@ -15,6 +15,8 @@ import 'reactflow/dist/style.css';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { ArrowLeft, Lock, CheckCircle, Circle } from 'lucide-react';
 import type { Module, Topic, Lesson } from '@/types/curriculum';
+import { useAuth } from '@/contexts/auth-context';
+import { getCurricula, getProgress } from '@/lib/firestore';
 
 // Custom node component
 const LessonNode = ({ data }: any) => {
@@ -25,9 +27,9 @@ const LessonNode = ({ data }: any) => {
     return (
         <div
             className={`px-4 py-3 rounded-lg border-2 min-w-[200px] cursor-pointer transition-all ${isLocked ? 'bg-slate-800 border-slate-700 opacity-50' :
-                    isCompleted ? 'bg-green-900/30 border-green-500' :
-                        isInProgress ? 'bg-yellow-900/30 border-yellow-500' :
-                            'bg-blue-900/30 border-blue-500 hover:border-blue-400'
+                isCompleted ? 'bg-green-900/30 border-green-500' :
+                    isInProgress ? 'bg-yellow-900/30 border-yellow-500' :
+                        'bg-blue-900/30 border-blue-500 hover:border-blue-400'
                 }`}
             onClick={() => !isLocked && data.onClick()}
         >
@@ -52,6 +54,7 @@ export default function LearningMapPage() {
     const router = useRouter();
     const params = useParams();
     const curriculumId = params.curriculumId as string;
+    const { user } = useAuth();
 
     const [curriculum, setCurriculum] = useState<any>(null);
     const [nodes, setNodes, onNodesChange] = useNodesState([]);
@@ -59,83 +62,92 @@ export default function LearningMapPage() {
     const [progress, setProgress] = useState<Set<string>>(new Set());
 
     useEffect(() => {
-        // Load curriculum
-        const curricula = JSON.parse(localStorage.getItem('curricula') || '[]');
-        const found = curricula.find((c: any) => c.id === curriculumId);
+        const loadCurriculum = async () => {
+            if (!user) return;
 
-        if (!found) {
-            router.push('/learning-paths');
-            return;
-        }
+            try {
+                const curricula = await getCurricula(user.uid);
+                const found = curricula.find((c: any) => c.id === curriculumId);
 
-        setCurriculum(found);
+                if (!found) {
+                    router.push('/learning-paths');
+                    return;
+                }
 
-        // Load progress
-        const savedProgress = localStorage.getItem(`progress-${curriculumId}`);
-        if (savedProgress) {
-            setProgress(new Set(JSON.parse(savedProgress)));
-        }
+                setCurriculum(found);
 
-        // Build nodes and edges
-        const newNodes: Node[] = [];
-        const newEdges: Edge[] = [];
-        let yOffset = 0;
+                // Load progress from Firestore
+                const savedProgress = await getProgress(user.uid, curriculumId);
+                if (savedProgress.length > 0) {
+                    setProgress(new Set(savedProgress));
+                }
 
-        found.modules?.forEach((module: Module, moduleIdx: number) => {
-            let xOffset = 0;
+                // Build nodes and edges
+                const newNodes: Node[] = [];
+                const newEdges: Edge[] = [];
+                let yOffset = 0;
 
-            module.topics?.forEach((topic: Topic, topicIdx: number) => {
-                topic.lessons?.forEach((lesson: Lesson, lessonIdx: number) => {
-                    const completedLessons = savedProgress ? JSON.parse(savedProgress) : [];
-                    const isUnlocked = lesson.prerequisites.length === 0 ||
-                        lesson.prerequisites.every(prereq => completedLessons.includes(prereq));
+                found.modules?.forEach((module: Module, moduleIdx: number) => {
+                    let xOffset = 0;
 
-                    newNodes.push({
-                        id: lesson.id,
-                        type: 'lesson',
-                        position: { x: xOffset, y: yOffset },
-                        data: {
-                            label: lesson.name,
-                            minutes: lesson.estimatedMinutes,
-                            status: completedLessons.includes(lesson.id) ? 'completed' :
-                                isUnlocked ? 'unlocked' : 'locked',
-                            onClick: () => {
-                                if (isUnlocked) {
-                                    router.push(`/learning-paths/${curriculumId}/lesson/${lesson.id}`);
-                                }
-                            }
-                        },
-                    });
+                    module.topics?.forEach((topic: Topic, topicIdx: number) => {
+                        topic.lessons?.forEach((lesson: Lesson, lessonIdx: number) => {
+                            const isUnlocked = lesson.prerequisites.length === 0 ||
+                                lesson.prerequisites.every(prereq => savedProgress.includes(prereq));
 
-                    // Create edges for prerequisites
-                    lesson.prerequisites?.forEach(prereqId => {
-                        newEdges.push({
-                            id: `${prereqId}-${lesson.id}`,
-                            source: prereqId,
-                            target: lesson.id,
-                            type: 'smoothstep',
-                            animated: completedLessons.includes(prereqId),
-                            markerEnd: {
-                                type: MarkerType.ArrowClosed,
-                                color: '#3b82f6',
-                            },
-                            style: { stroke: '#3b82f6' },
+                            newNodes.push({
+                                id: lesson.id,
+                                type: 'lesson',
+                                position: { x: xOffset, y: yOffset },
+                                data: {
+                                    label: lesson.name,
+                                    minutes: lesson.estimatedMinutes,
+                                    status: savedProgress.includes(lesson.id) ? 'completed' :
+                                        isUnlocked ? 'unlocked' : 'locked',
+                                    onClick: () => {
+                                        if (isUnlocked) {
+                                            router.push(`/learning-paths/${curriculumId}/lesson/${lesson.id}`);
+                                        }
+                                    }
+                                },
+                            });
+
+                            // Create edges for prerequisites
+                            lesson.prerequisites?.forEach(prereqId => {
+                                newEdges.push({
+                                    id: `${prereqId}-${lesson.id}`,
+                                    source: prereqId,
+                                    target: lesson.id,
+                                    type: 'smoothstep',
+                                    animated: savedProgress.includes(prereqId),
+                                    markerEnd: {
+                                        type: MarkerType.ArrowClosed,
+                                        color: '#3b82f6',
+                                    },
+                                    style: { stroke: '#3b82f6' },
+                                });
+                            });
+
+                            xOffset += 300;
                         });
+
+                        yOffset += 150;
+                        xOffset = 0;
                     });
 
-                    xOffset += 300;
+                    yOffset += 50;
                 });
 
-                yOffset += 150;
-                xOffset = 0;
-            });
+                setNodes(newNodes);
+                setEdges(newEdges);
+            } catch (error) {
+                console.error('Failed to load curriculum', error);
+                router.push('/learning-paths');
+            }
+        };
 
-            yOffset += 50;
-        });
-
-        setNodes(newNodes);
-        setEdges(newEdges);
-    }, [curriculumId, router, setNodes, setEdges]);
+        loadCurriculum();
+    }, [curriculumId, router, setNodes, setEdges, user]);
 
     if (!curriculum) {
         return (

@@ -103,3 +103,22 @@ export async function getChallenges(userId: string): Promise<any[]> {
     }
     return [];
 }
+
+// ====== PROJECT TASKS ======
+
+export async function saveProjectTasks(userId: string, projectId: string, completedTasks: string[]) {
+    const docRef = doc(db, getUserPath(userId, 'projectTasks'), projectId);
+    await setDoc(docRef, {
+        completedTasks,
+        updatedAt: new Date().toISOString(),
+    });
+}
+
+export async function getProjectTasks(userId: string, projectId: string): Promise<string[]> {
+    const docRef = doc(db, getUserPath(userId, 'projectTasks'), projectId);
+    const snapshot = await getDoc(docRef);
+    if (snapshot.exists()) {
+        return snapshot.data().completedTasks || [];
+    }
+    return [];
+}

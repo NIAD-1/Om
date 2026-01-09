@@ -4,6 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { Code, Trophy, Calendar, Plus, ExternalLink, CheckCircle, Circle } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useAuth } from '@/contexts/auth-context';
+import { getChallenges, saveChallenges } from '@/lib/firestore';
 
 interface Challenge {
     id: string;
@@ -17,7 +19,9 @@ interface Challenge {
 }
 
 export default function ChallengesPage() {
+    const { user } = useAuth();
     const [challenges, setChallenges] = useState<Challenge[]>([]);
+    const [loading, setLoading] = useState(true);
     const [showAddModal, setShowAddModal] = useState(false);
     const [newChallenge, setNewChallenge] = useState({
         title: '',
@@ -28,38 +32,55 @@ export default function ChallengesPage() {
     });
 
     useEffect(() => {
-        const saved = localStorage.getItem('coding-challenges');
-        if (saved) {
-            setChallenges(JSON.parse(saved));
-        } else {
-            // Add default challenges
-            const defaults: Challenge[] = [
-                {
-                    id: 'lc-today',
-                    title: 'Two Sum',
-                    platform: 'leetcode',
-                    difficulty: 'easy',
-                    url: 'https://leetcode.com/problems/two-sum/',
-                    description: 'Find two numbers that add up to a target',
-                    completed: false,
-                    dateAdded: new Date().toISOString(),
-                },
-            ];
-            setChallenges(defaults);
-            localStorage.setItem('coding-challenges', JSON.stringify(defaults));
-        }
-    }, []);
+        const loadChallenges = async () => {
+            if (!user) {
+                setLoading(false);
+                return;
+            }
 
-    const saveChallenges = (updated: Challenge[]) => {
+            try {
+                const saved = await getChallenges(user.uid);
+                if (saved.length > 0) {
+                    setChallenges(saved);
+                } else {
+                    // Add default challenges
+                    const defaults: Challenge[] = [
+                        {
+                            id: 'lc-today',
+                            title: 'Two Sum',
+                            platform: 'leetcode',
+                            difficulty: 'easy',
+                            url: 'https://leetcode.com/problems/two-sum/',
+                            description: 'Find two numbers that add up to a target',
+                            completed: false,
+                            dateAdded: new Date().toISOString(),
+                        },
+                    ];
+                    setChallenges(defaults);
+                    await saveChallenges(user.uid, defaults);
+                }
+            } catch (error) {
+                console.error('Failed to load challenges', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        loadChallenges();
+    }, [user]);
+
+    const updateChallenges = async (updated: Challenge[]) => {
         setChallenges(updated);
-        localStorage.setItem('coding-challenges', JSON.stringify(updated));
+        if (user) {
+            await saveChallenges(user.uid, updated);
+        }
     };
 
     const toggleComplete = (id: string) => {
         const updated = challenges.map(c =>
             c.id === id ? { ...c, completed: !c.completed } : c
         );
-        saveChallenges(updated);
+        updateChallenges(updated);
     };
 
     const addChallenge = () => {
@@ -69,7 +90,7 @@ export default function ChallengesPage() {
             completed: false,
             dateAdded: new Date().toISOString(),
         };
-        saveChallenges([...challenges, challenge]);
+        updateChallenges([...challenges, challenge]);
         setShowAddModal(false);
         setNewChallenge({
             title: '',

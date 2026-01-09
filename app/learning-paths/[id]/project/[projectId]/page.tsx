@@ -4,6 +4,8 @@ import React, { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { ArrowLeft, Code, Clock, CheckCircle2, Circle, ExternalLink } from 'lucide-react';
+import { useAuth } from '@/contexts/auth-context';
+import { getCurricula, getProjectTasks, saveProjectTasks } from '@/lib/firestore';
 
 interface Project {
     id: string;
@@ -31,39 +33,51 @@ export default function ProjectDetailPage() {
     const params = useParams();
     const curriculumId = params.id as string;
     const projectId = params.projectId as string;
+    const { user } = useAuth();
 
     const [project, setProject] = useState<Project | null>(null);
     const [curriculumTitle, setCurriculumTitle] = useState('');
     const [completedTasks, setCompletedTasks] = useState<Set<string>>(new Set());
 
     useEffect(() => {
-        const curricula = JSON.parse(localStorage.getItem('curricula') || '[]');
-        const curriculum = curricula.find((c: any) => c.id === curriculumId);
+        const loadProject = async () => {
+            if (!user) return;
 
-        if (!curriculum) {
-            router.push('/learning-paths');
-            return;
-        }
+            try {
+                const curricula = await getCurricula(user.uid);
+                const curriculum = curricula.find((c: any) => c.id === curriculumId);
 
-        setCurriculumTitle(curriculum.field);
+                if (!curriculum) {
+                    router.push('/learning-paths');
+                    return;
+                }
 
-        const foundProject = curriculum.projects?.find((p: Project) => p.id === projectId);
+                setCurriculumTitle(curriculum.field);
 
-        if (!foundProject) {
-            router.push(`/learning-paths/${curriculumId}`);
-            return;
-        }
+                const foundProject = curriculum.projects?.find((p: Project) => p.id === projectId);
 
-        setProject(foundProject);
+                if (!foundProject) {
+                    router.push(`/learning-paths/${curriculumId}`);
+                    return;
+                }
 
-        // Load completed tasks from localStorage
-        const saved = localStorage.getItem(`project-${projectId}-tasks`);
-        if (saved) {
-            setCompletedTasks(new Set(JSON.parse(saved)));
-        }
-    }, [curriculumId, projectId, router]);
+                setProject(foundProject);
 
-    const toggleTask = (taskId: string) => {
+                // Load completed tasks from Firestore
+                const saved = await getProjectTasks(user.uid, projectId);
+                if (saved.length > 0) {
+                    setCompletedTasks(new Set(saved));
+                }
+            } catch (error) {
+                console.error('Failed to load project', error);
+                router.push('/learning-paths');
+            }
+        };
+
+        loadProject();
+    }, [curriculumId, projectId, router, user]);
+
+    const toggleTask = async (taskId: string) => {
         const newCompleted = new Set(completedTasks);
         if (newCompleted.has(taskId)) {
             newCompleted.delete(taskId);
@@ -71,7 +85,9 @@ export default function ProjectDetailPage() {
             newCompleted.add(taskId);
         }
         setCompletedTasks(newCompleted);
-        localStorage.setItem(`project-${projectId}-tasks`, JSON.stringify(Array.from(newCompleted)));
+        if (user) {
+            await saveProjectTasks(user.uid, projectId, Array.from(newCompleted));
+        }
     };
 
     if (!project) {

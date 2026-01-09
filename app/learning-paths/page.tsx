@@ -39,7 +39,7 @@ function LearningPathsPage() {
 
   const [curricula, setCurricula] = useState<SavedCurriculum[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showMigrationBanner, setShowMigrationBanner] = useState(false);
+
 
   useEffect(() => {
     const loadCurricula = async () => {
@@ -70,37 +70,7 @@ function LearningPathsPage() {
     loadCurricula();
   }, [user, domainFilter]);
 
-  const migrateDomains = () => {
-    const curricula = JSON.parse(localStorage.getItem('curricula') || '[]');
 
-    const updated = curricula.map((curriculum: any) => {
-      if (curriculum.domain) return curriculum;
-
-      const field = curriculum.field.toLowerCase();
-      let domain = 'other';
-
-      if (field.includes('sql') || field.includes('machine learning') || field.includes('ml') ||
-        field.includes('programming') || field.includes('tech') || field.includes('data')) {
-        domain = 'technology';
-      } else if (field.includes('finance') || field.includes('trading') || field.includes('money')) {
-        domain = 'finance';
-      } else if (field.includes('business') || field.includes('management') || field.includes('marketing')) {
-        domain = 'business';
-      } else if (field.includes('biology') || field.includes('chemistry') || field.includes('physics') ||
-        field.includes('science') || field.includes('molecular')) {
-        domain = 'sciences';
-      } else if (field.includes('art') || field.includes('design') || field.includes('music')) {
-        domain = 'arts';
-      }
-
-      return { ...curriculum, domain };
-    });
-
-    localStorage.setItem('curricula', JSON.stringify(updated));
-    localStorage.setItem('domains-migrated', 'true');
-    setShowMigrationBanner(false);
-    window.location.reload();
-  };
 
   const handleDelete = async (id: string) => {
     if (!user) return;
@@ -145,35 +115,6 @@ function LearningPathsPage() {
             + Create Manual
           </button>
         </div>
-
-        {/* Migration Banner */}
-        {showMigrationBanner && (
-          <div className="mb-6 p-4 rounded-lg bg-blue-500/10 border border-blue-500/30">
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex-1">
-                <h3 className="font-semibold text-white mb-1">🔧 Domain Migration Available</h3>
-                <p className="text-sm text-slate-300 mb-3">
-                  Your curricula don't have domains assigned. Click below to auto-categorize them!
-                </p>
-                <button
-                  onClick={migrateDomains}
-                  className="px-4 py-2 rounded-lg bg-blue-500 hover:bg-blue-600 text-white font-medium text-sm transition-colors"
-                >
-                  Auto-Assign Domains
-                </button>
-              </div>
-              <button
-                onClick={() => {
-                  localStorage.setItem('domains-migrated', 'true');
-                  setShowMigrationBanner(false);
-                }}
-                className="text-slate-400 hover:text-white"
-              >
-                ✕
-              </button>
-            </div>
-          </div>
-        )}
 
         {curricula.length === 0 ? (
           <div className="card text-center py-16">
@@ -239,8 +180,9 @@ function LearningPathsPage() {
               </motion.div>
             ))}
           </div>
-        )}
-      </div>
-    </DashboardLayout>
+        )
+        }
+      </div >
+    </DashboardLayout >
   );
 }
