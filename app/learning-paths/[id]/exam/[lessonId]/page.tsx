@@ -4,6 +4,8 @@ import React, { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { ArrowLeft, CheckCircle, XCircle, Clock, Loader2 } from 'lucide-react';
+import { useAuth } from '@/contexts/auth-context';
+import { getCurricula, getProgress, saveProgress } from '@/lib/firestore';
 
 interface Question {
     id: string;
@@ -28,6 +30,7 @@ export default function ExamPage() {
     const params = useParams();
     const curriculumId = params.id as string;
     const lessonId = params.lessonId as string;
+    const { user } = useAuth();
 
     const [exam, setExam] = useState<Exam | null>(null);
     const [loading, setLoading] = useState(true);
@@ -38,25 +41,36 @@ export default function ExamPage() {
 
     useEffect(() => {
         const generateExam = async () => {
-            // Load lesson details
-            const curricula = JSON.parse(localStorage.getItem('curricula') || '[]');
-            const curriculum = curricula.find((c: any) => c.id === curriculumId);
+            if (!user) {
+                setLoading(false);
+                return;
+            }
 
-            if (!curriculum) return;
-
-            let lesson: any = null;
-            curriculum.modules?.forEach((module: any) => {
-                module.topics?.forEach((topic: any) => {
-                    const found = topic.lessons?.find((l: any) => l.id === lessonId);
-                    if (found) lesson = found;
-                });
-            });
-
-            if (!lesson) return;
-            setLessonName(lesson.name);
-
-            // Generate exam
             try {
+                // Load lesson details from Firestore
+                const curricula = await getCurricula(user.uid);
+                const curriculum = curricula.find((c: any) => c.id === curriculumId);
+
+                if (!curriculum) {
+                    setLoading(false);
+                    return;
+                }
+
+                let lesson: any = null;
+                curriculum.modules?.forEach((module: any) => {
+                    module.topics?.forEach((topic: any) => {
+                        const found = topic.lessons?.find((l: any) => l.id === lessonId);
+                        if (found) lesson = found;
+                    });
+                });
+
+                if (!lesson) {
+                    setLoading(false);
+                    return;
+                }
+                setLessonName(lesson.name);
+
+                // Generate exam
                 const response = await fetch('/api/generate-exam', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -79,10 +93,10 @@ export default function ExamPage() {
         };
 
         generateExam();
-    }, [curriculumId, lessonId]);
+    }, [curriculumId, lessonId, user]);
 
-    const handleSubmit = () => {
-        if (!exam) return;
+    const handleSubmit = async () => {
+        if (!exam || !user) return;
 
         let earnedPoints = 0;
         exam.questions.forEach(q => {
@@ -101,11 +115,14 @@ export default function ExamPage() {
 
         // Save result if passed
         if (percentage >= exam.passingScore) {
-            const progressKey = `progress-${curriculumId}`;
-            const existing = JSON.parse(localStorage.getItem(progressKey) || '[]');
-            if (!existing.includes(lessonId)) {
-                existing.push(lessonId);
-                localStorage.setItem(progressKey, JSON.stringify(existing));
+            try {
+                const existing = await getProgress(user.uid, curriculumId);
+                if (!existing.includes(lessonId)) {
+                    existing.push(lessonId);
+                    await saveProgress(user.uid, curriculumId, existing);
+                }
+            } catch (error) {
+                console.error('Failed to save progress', error);
             }
         }
     };
@@ -176,14 +193,14 @@ export default function ExamPage() {
                                                 <label
                                                     key={optIdx}
                                                     className={`block p-3 rounded-lg border cursor-pointer transition-colors ${submitted
-                                                            ? optIdx === q.correctAnswer
-                                                                ? 'border-green-500 bg-green-500/10'
-                                                                : answers[q.id] === optIdx
-                                                                    ? 'border-red-500 bg-red-500/10'
-                                                                    : 'border-slate-700 bg-slate-800/30'
+                                                        ? optIdx === q.correctAnswer
+                                                            ? 'border-green-500 bg-green-500/10'
                                                             : answers[q.id] === optIdx
-                                                                ? 'border-blue-500 bg-blue-500/10'
-                                                                : 'border-slate-700 hover:border-slate-600 bg-slate-800/30'
+                                                                ? 'border-red-500 bg-red-500/10'
+                                                                : 'border-slate-700 bg-slate-800/30'
+                                                        : answers[q.id] === optIdx
+                                                            ? 'border-blue-500 bg-blue-500/10'
+                                                            : 'border-slate-700 hover:border-slate-600 bg-slate-800/30'
                                                         }`}
                                                 >
                                                     <input

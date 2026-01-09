@@ -4,6 +4,8 @@ import React, { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { ArrowLeft, CheckCircle, XCircle, Loader2 } from 'lucide-react';
+import { useAuth } from '@/contexts/auth-context';
+import { getCurricula } from '@/lib/firestore';
 
 interface Question {
     id: string;
@@ -18,6 +20,7 @@ export default function QuizPage() {
     const params = useParams();
     const curriculumId = params.id as string;
     const lessonId = params.lessonId as string;
+    const { user } = useAuth();
 
     const [questions, setQuestions] = useState<Question[]>([]);
     const [loading, setLoading] = useState(true);
@@ -28,23 +31,34 @@ export default function QuizPage() {
 
     useEffect(() => {
         const generateQuiz = async () => {
-            const curricula = JSON.parse(localStorage.getItem('curricula') || '[]');
-            const curriculum = curricula.find((c: any) => c.id === curriculumId);
-
-            if (!curriculum) return;
-
-            let lesson: any = null;
-            curriculum.modules?.forEach((module: any) => {
-                module.topics?.forEach((topic: any) => {
-                    const found = topic.lessons?.find((l: any) => l.id === lessonId);
-                    if (found) lesson = found;
-                });
-            });
-
-            if (!lesson) return;
-            setLessonName(lesson.name);
+            if (!user) {
+                setLoading(false);
+                return;
+            }
 
             try {
+                const curricula = await getCurricula(user.uid);
+                const curriculum = curricula.find((c: any) => c.id === curriculumId);
+
+                if (!curriculum) {
+                    setLoading(false);
+                    return;
+                }
+
+                let lesson: any = null;
+                curriculum.modules?.forEach((module: any) => {
+                    module.topics?.forEach((topic: any) => {
+                        const found = topic.lessons?.find((l: any) => l.id === lessonId);
+                        if (found) lesson = found;
+                    });
+                });
+
+                if (!lesson) {
+                    setLoading(false);
+                    return;
+                }
+                setLessonName(lesson.name);
+
                 const response = await fetch('/api/generate-quiz', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -67,7 +81,7 @@ export default function QuizPage() {
         };
 
         generateQuiz();
-    }, [curriculumId, lessonId]);
+    }, [curriculumId, lessonId, user]);
 
     const handleSubmit = () => {
         let correct = 0;
@@ -129,14 +143,14 @@ export default function QuizPage() {
                                     <label
                                         key={optIdx}
                                         className={`block p-3 rounded-lg border cursor-pointer transition-colors ${submitted
-                                                ? optIdx === q.correctAnswer
-                                                    ? 'border-green-500 bg-green-500/10'
-                                                    : answers[q.id] === optIdx
-                                                        ? 'border-red-500 bg-red-500/10'
-                                                        : 'border-slate-700'
+                                            ? optIdx === q.correctAnswer
+                                                ? 'border-green-500 bg-green-500/10'
                                                 : answers[q.id] === optIdx
-                                                    ? 'border-yellow-500 bg-yellow-500/10'
-                                                    : 'border-slate-700 hover:border-slate-600'
+                                                    ? 'border-red-500 bg-red-500/10'
+                                                    : 'border-slate-700'
+                                            : answers[q.id] === optIdx
+                                                ? 'border-yellow-500 bg-yellow-500/10'
+                                                : 'border-slate-700 hover:border-slate-600'
                                             }`}
                                     >
                                         <input
