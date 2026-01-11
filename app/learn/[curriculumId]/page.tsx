@@ -10,6 +10,7 @@ import ReactFlow, {
     useNodesState,
     useEdgesState,
     MarkerType,
+    Position,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
@@ -17,6 +18,44 @@ import { ArrowLeft, Lock, CheckCircle, Circle } from 'lucide-react';
 import type { Module, Topic, Lesson } from '@/types/curriculum';
 import { useAuth } from '@/contexts/auth-context';
 import { getCurricula, getProgress } from '@/lib/firestore';
+import dagre from 'dagre';
+
+const dagreGraph = new dagre.graphlib.Graph();
+dagreGraph.setDefaultEdgeLabel(() => ({}));
+
+const nodeWidth = 240;
+const nodeHeight = 100;
+
+const getLayoutedElements = (nodes: Node[], edges: Edge[]) => {
+    dagreGraph.setGraph({ rankdir: 'LR' }); // Left-to-right layout
+
+    nodes.forEach((node) => {
+        dagreGraph.setNode(node.id, { width: nodeWidth, height: nodeHeight });
+    });
+
+    edges.forEach((edge) => {
+        dagreGraph.setEdge(edge.source, edge.target);
+    });
+
+    dagre.layout(dagreGraph);
+
+    nodes.forEach((node) => {
+        const nodeWithPosition = dagreGraph.node(node.id);
+        node.targetPosition = Position.Left;
+        node.sourcePosition = Position.Right;
+
+        // We are shifting the dagre node position (anchor=center center) to the top left
+        // so it matches the React Flow node anchor point (top left).
+        node.position = {
+            x: nodeWithPosition.x - nodeWidth / 2,
+            y: nodeWithPosition.y - nodeHeight / 2,
+        };
+
+        return node;
+    });
+
+    return { nodes, edges };
+};
 
 // Custom node component
 const LessonNode = ({ data }: any) => {
@@ -84,22 +123,18 @@ export default function LearningMapPage() {
                 }
 
                 // Build nodes and edges
-                const newNodes: Node[] = [];
-                const newEdges: Edge[] = [];
-                let yOffset = 0;
+                const initialNodes: Node[] = [];
+                const initialEdges: Edge[] = [];
 
-                found.modules?.forEach((module: Module, moduleIdx: number) => {
-                    let xOffset = 0;
-
-                    module.topics?.forEach((topic: Topic, topicIdx: number) => {
-                        topic.lessons?.forEach((lesson: Lesson, lessonIdx: number) => {
+                found.modules?.forEach((module: Module) => {
+                    module.topics?.forEach((topic: Topic) => {
+                        topic.lessons?.forEach((lesson: Lesson) => {
                             const isUnlocked = lesson.prerequisites.length === 0 ||
                                 lesson.prerequisites.every(prereq => savedProgress.includes(prereq));
 
-                            newNodes.push({
+                            initialNodes.push({
                                 id: lesson.id,
                                 type: 'lesson',
-                                position: { x: xOffset, y: yOffset },
                                 data: {
                                     label: lesson.name,
                                     minutes: lesson.estimatedMinutes,
@@ -111,11 +146,12 @@ export default function LearningMapPage() {
                                         }
                                     }
                                 },
+                                position: { x: 0, y: 0 } // Position will be set by dagre
                             });
 
                             // Create edges for prerequisites
                             lesson.prerequisites?.forEach(prereqId => {
-                                newEdges.push({
+                                initialEdges.push({
                                     id: `${prereqId}-${lesson.id}`,
                                     source: prereqId,
                                     target: lesson.id,
@@ -128,19 +164,17 @@ export default function LearningMapPage() {
                                     style: { stroke: '#3b82f6' },
                                 });
                             });
-
-                            xOffset += 300;
                         });
-
-                        yOffset += 150;
-                        xOffset = 0;
                     });
-
-                    yOffset += 50;
                 });
 
-                setNodes(newNodes);
-                setEdges(newEdges);
+                const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(
+                    initialNodes,
+                    initialEdges
+                );
+
+                setNodes(layoutedNodes);
+                setEdges(layoutedEdges);
             } catch (error) {
                 console.error('Failed to load curriculum', error);
                 router.push('/learning-paths');

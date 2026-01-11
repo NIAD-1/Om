@@ -6,18 +6,19 @@ import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { ArrowLeft, Sparkles, Copy, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
 import { saveRoadmap, saveCurriculum } from '@/lib/firestore';
+import { DOMAINS } from '@/lib/domains-config';
 
 export default function CreateRoadmapManualPage() {
     const router = useRouter();
     const { user } = useAuth();
+    const [title, setTitle] = useState('');
+    const [description, setDescription] = useState('');
+    const [domain, setDomain] = useState('technology');
     const [jsonInput, setJsonInput] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
 
     const exampleRoadmap = {
-        title: "AI Engineer Roadmap",
-        description: "Complete path from basics to advanced AI engineering",
-        domain: "technology",
         curricula: [
             {
                 title: "Data Analysis Fundamentals",
@@ -88,7 +89,10 @@ export default function CreateRoadmapManualPage() {
     };
 
     const loadExample = () => {
-        setJsonInput(JSON.stringify(exampleRoadmap, null, 2));
+        setTitle("AI Engineer Roadmap");
+        setDescription("Complete path from basics to advanced AI engineering");
+        setDomain("technology");
+        setJsonInput(JSON.stringify(exampleRoadmap.curricula, null, 2));
         setError('');
     };
 
@@ -96,17 +100,43 @@ export default function CreateRoadmapManualPage() {
         setLoading(true);
         setError('');
 
-        try {
-            const roadmapData = JSON.parse(jsonInput);
+        if (!title.trim()) {
+            setError('Please enter a roadmap title');
+            setLoading(false);
+            return;
+        }
 
-            // Validation
-            if (!roadmapData.title || !roadmapData.curricula) {
-                throw new Error('Roadmap must have "title" and "curricula" fields');
+        if (!jsonInput.trim()) {
+            setError('Please provide curricula JSON');
+            setLoading(false);
+            return;
+        }
+
+        try {
+            let curriculaData;
+            try {
+                curriculaData = JSON.parse(jsonInput);
+                // Handle case where user pasted full roadmap object instead of just array
+                if (!Array.isArray(curriculaData) && curriculaData.curricula) {
+                    if (!title) setTitle(curriculaData.title);
+                    if (!description) setDescription(curriculaData.description);
+                    if (curriculaData.domain) setDomain(curriculaData.domain);
+                    curriculaData = curriculaData.curricula;
+                }
+            } catch (e) {
+                throw new Error('Invalid JSON format in Curricula field');
             }
 
-            if (!Array.isArray(roadmapData.curricula) || roadmapData.curricula.length === 0) {
+            if (!Array.isArray(curriculaData) || curriculaData.length === 0) {
                 throw new Error('Curricula must be a non-empty array');
             }
+
+            const roadmapData = {
+                title,
+                description,
+                domain,
+                curricula: curriculaData
+            };
 
             // Generate IDs for roadmap and curricula
             const roadmapId = crypto.randomUUID();
@@ -176,8 +206,46 @@ export default function CreateRoadmapManualPage() {
                         <ArrowLeft className="h-5 w-5" />
                     </button>
                     <div>
-                        <h1 className="text-3xl font-bold text-white">Create Roadmap from JSON</h1>
-                        <p className="text-slate-400">Paste your custom roadmap JSON</p>
+                        <h1 className="text-3xl font-bold text-white">Create Roadmap</h1>
+                        <p className="text-slate-400">Define roadmap details and import curricula layout</p>
+                    </div>
+                </div>
+
+                {/* Details Form */}
+                <div className="card space-y-4">
+                    <h2 className="text-xl font-semibold text-white">Roadmap Details</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-slate-300">Title</label>
+                            <input
+                                type="text"
+                                value={title}
+                                onChange={(e) => setTitle(e.target.value)}
+                                placeholder="e.g. AI Engineer Roadmap"
+                                className="w-full px-4 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white focus:outline-none focus:border-blue-500"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-slate-300">Domain</label>
+                            <select
+                                value={domain}
+                                onChange={(e) => setDomain(e.target.value)}
+                                className="w-full px-4 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white focus:outline-none focus:border-blue-500"
+                            >
+                                {DOMAINS.map((d) => (
+                                    <option key={d.id} value={d.id}>{d.name}</option>
+                                ))}
+                            </select>
+                        </div>
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium text-slate-300">Description</label>
+                        <textarea
+                            value={description}
+                            onChange={(e) => setDescription(e.target.value)}
+                            placeholder="Brief overview of this learning path..."
+                            className="w-full px-4 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white focus:outline-none focus:border-blue-500 h-24"
+                        />
                     </div>
                 </div>
 
@@ -194,17 +262,17 @@ export default function CreateRoadmapManualPage() {
                         </button>
                     </div>
                     <p className="text-sm text-slate-300">
-                        Your JSON should include: <code className="text-blue-400">title</code>, <code className="text-blue-400">description</code>, <code className="text-blue-400">domain</code>, and <code className="text-blue-400">curricula</code> array.
+                        Map out your modules, lessons, and projects in JSON format.
                     </p>
                     <p className="text-xs text-slate-500 mt-2">
-                        Click "Load Example" to see the full format with modules, lessons, and projects.
+                        Click "Load Example" to see the expected structure.
                     </p>
                 </div>
 
                 {/* JSON Input */}
                 <div className="card">
                     <label className="block text-sm font-medium text-slate-300 mb-2">
-                        Roadmap JSON *
+                        Curricula Structure (JSON Array) *
                     </label>
                     <textarea
                         value={jsonInput}
@@ -212,7 +280,7 @@ export default function CreateRoadmapManualPage() {
                             setJsonInput(e.target.value);
                             setError('');
                         }}
-                        placeholder='{"title": "Your Roadmap", "curricula": [...]}'
+                        placeholder='[ { "title": "Module 1", ... } ]'
                         rows={20}
                         className="w-full px-4 py-3 rounded-lg bg-slate-950 border border-slate-700 text-white font-mono text-sm focus:outline-none focus:border-blue-500"
                     />
