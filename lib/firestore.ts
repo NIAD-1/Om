@@ -62,16 +62,40 @@ export async function saveProgress(userId: string, curriculumId: string, complet
     await setDoc(docRef, {
         completedLessons,
         updatedAt: new Date().toISOString(),
+    }, { merge: true });
+}
+
+export async function saveVideoProgress(userId: string, curriculumId: string, lessonId: string, timestamp: number) {
+    const docRef = doc(db, getUserPath(userId, 'progress'), curriculumId);
+    // Use dot notation to update a specific key in the map without overwriting
+    await updateDoc(docRef, {
+        [`timestamps.${lessonId}`]: timestamp,
+        updatedAt: new Date().toISOString(),
+    }).catch(async (error) => {
+        // If document doesn't exist, create it
+        if (error.code === 'not-found') {
+            await setDoc(docRef, {
+                completedLessons: [],
+                timestamps: { [lessonId]: timestamp },
+                updatedAt: new Date().toISOString(),
+            });
+        } else {
+            throw error;
+        }
     });
 }
 
-export async function getProgress(userId: string, curriculumId: string): Promise<string[]> {
+export async function getProgress(userId: string, curriculumId: string): Promise<{ completedLessons: string[], timestamps: Record<string, number> }> {
     const docRef = doc(db, getUserPath(userId, 'progress'), curriculumId);
     const snapshot = await getDoc(docRef);
     if (snapshot.exists()) {
-        return snapshot.data().completedLessons || [];
+        const data = snapshot.data();
+        return {
+            completedLessons: data.completedLessons || [],
+            timestamps: data.timestamps || {}
+        };
     }
-    return [];
+    return { completedLessons: [], timestamps: {} };
 }
 
 // ====== USER PROFILE ======

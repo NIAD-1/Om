@@ -77,7 +77,8 @@ export default function LearningMapPage() {
                 setCurriculum(found);
 
                 // Load progress from Firestore
-                const savedProgress = await getProgress(user.uid, curriculumId);
+                const savedData = await getProgress(user.uid, curriculumId);
+                const savedProgress = savedData.completedLessons;
                 if (savedProgress.length > 0) {
                     setProgress(new Set(savedProgress));
                 }

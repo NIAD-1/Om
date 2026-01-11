@@ -23,6 +23,7 @@
     "react-dom": "19.2.3",
     "react-katex": "^3.1.0",
     "react-syntax-highlighter": "^16.1.0",
+    "react-youtube": "^10.1.0",
     "reactflow": "^11.11.4",
     "uuid": "^11.0.4"
   },

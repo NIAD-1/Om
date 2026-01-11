@@ -116,7 +116,8 @@ export default function ExamPage() {
         // Save result if passed
         if (percentage >= exam.passingScore) {
             try {
-                const existing = await getProgress(user.uid, curriculumId);
+                const savedData = await getProgress(user.uid, curriculumId);
+                const existing = savedData.completedLessons;
                 if (!existing.includes(lessonId)) {
                     existing.push(lessonId);
                     await saveProgress(user.uid, curriculumId, existing);

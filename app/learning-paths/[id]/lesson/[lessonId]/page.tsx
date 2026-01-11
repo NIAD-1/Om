@@ -6,7 +6,8 @@ import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { ArrowLeft, Clock, BookOpen, ExternalLink } from 'lucide-react';
 import AITutorSidebar from '@/components/ai-tutor/ai-tutor-sidebar';
 import { useAuth } from '@/contexts/auth-context';
-import { getCurricula, saveProgress, getProgress } from '@/lib/firestore';
+import { getCurricula, saveProgress, getProgress, saveVideoProgress } from '@/lib/firestore';
+import YouTube from 'react-youtube';
 
 export default function LessonPage() {
     const router = useRouter();
@@ -17,6 +18,7 @@ export default function LessonPage() {
 
     const [lesson, setLesson] = useState<any>(null);
     const [curriculumTitle, setCurriculumTitle] = useState('');
+    const [savedTimestamp, setSavedTimestamp] = useState(0);
 
     useEffect(() => {
         const loadLesson = async () => {
@@ -47,6 +49,12 @@ export default function LessonPage() {
 
                 if (foundLesson) {
                     setLesson(foundLesson);
+
+                    // Load saved video progress
+                    const progressData = await getProgress(user.uid, curriculumId);
+                    if (progressData.timestamps?.[lessonId]) {
+                        setSavedTimestamp(progressData.timestamps[lessonId]);
+                    }
                 } else {
                     router.push(`/learning-paths/${curriculumId}`);
                 }
@@ -176,12 +184,31 @@ export default function LessonPage() {
                                         {/* Embedded Content */}
                                         <div className="bg-slate-950">
                                             {ytData.videoId && (
-                                                <div className="aspect-video">
-                                                    <iframe
-                                                        src={`https://www.youtube.com/embed/${ytData.videoId}${ytData.startTime > 0 ? `?start=${ytData.startTime}` : ''}`}
-                                                        className="w-full h-full"
-                                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                                        allowFullScreen
+                                                <div className="aspect-video relative">
+                                                    <YouTube
+                                                        videoId={ytData.videoId}
+                                                        opts={{
+                                                            height: '100%',
+                                                            width: '100%',
+                                                            playerVars: {
+                                                                autoplay: 0,
+                                                                start: savedTimestamp > 0 ? savedTimestamp : (ytData.startTime > 0 ? ytData.startTime : undefined),
+                                                            },
+                                                        }}
+                                                        className="absolute inset-0 w-full h-full"
+                                                        onStateChange={async (event) => {
+                                                            // Save progress when paused (2) or ended (0)
+                                                            if (user && (event.data === 2 || event.data === 0)) {
+                                                                const time = await event.target.getCurrentTime();
+                                                                await saveVideoProgress(user.uid, curriculumId, lessonId, Math.floor(time));
+                                                            }
+                                                        }}
+                                                        onPause={async (event) => {
+                                                            if (user) {
+                                                                const time = await event.target.getCurrentTime();
+                                                                await saveVideoProgress(user.uid, curriculumId, lessonId, Math.floor(time));
+                                                            }
+                                                        }}
                                                     />
                                                 </div>
                                             )}
@@ -207,7 +234,17 @@ export default function LessonPage() {
                             if (!user) return;
 
                             try {
-                                const existing = await getProgress(user.uid, curriculumId);
+                                const savedData = await getProgress(user.uid, curriculumId);
+                                const existing = savedData.completedLessons;
+
+                                // Also update local timestamps state if needed, but the video player uses direct check
+                                // However, getYouTubeEmbed helper might need the saved timestamp
+                                const savedTimestamp = savedData.timestamps?.[lessonId] || 0;
+                                if (savedTimestamp > 0) {
+                                    // Hack: update the YouTube embed helper logic or state to reflect this start time?
+                                    // Actually, getYouTubeEmbed takes a URL. We should likely pass the saved time into the player props directly.
+                                    // But the loop below uses getYouTubeEmbed.
+                                }
                                 if (!existing.includes(lessonId)) {
                                     existing.push(lessonId);
                                     await saveProgress(user.uid, curriculumId, existing);
