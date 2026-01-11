@@ -114,17 +114,42 @@ export default function CreateRoadmapManualPage() {
 
         try {
             let curriculaData;
+            let currentTitle = title;
+            let currentDescription = description;
+            let currentDomain = domain;
+
             try {
-                curriculaData = JSON.parse(jsonInput);
-                // Handle case where user pasted full roadmap object instead of just array
-                if (!Array.isArray(curriculaData) && curriculaData.curricula) {
-                    if (!title) setTitle(curriculaData.title);
-                    if (!description) setDescription(curriculaData.description);
-                    if (curriculaData.domain) setDomain(curriculaData.domain);
-                    curriculaData = curriculaData.curricula;
+                const parsed = JSON.parse(jsonInput);
+
+                if (Array.isArray(parsed)) {
+                    curriculaData = parsed;
+                } else if (parsed.curricula && Array.isArray(parsed.curricula)) {
+                    // Handle case where user pasted full roadmap object
+                    if (!currentTitle && parsed.title) {
+                        currentTitle = parsed.title;
+                        setTitle(currentTitle);
+                    }
+                    if (!currentDescription && parsed.description) {
+                        currentDescription = parsed.description;
+                        setDescription(currentDescription);
+                    }
+                    if (parsed.domain) {
+                        currentDomain = parsed.domain;
+                        setDomain(currentDomain);
+                    }
+                    curriculaData = parsed.curricula;
+                } else if (parsed.modules && Array.isArray(parsed.modules)) {
+                    // Handle case where user pasted a single curriculum object
+                    const curriculumTitle = parsed.title || currentTitle || "Main Curriculum";
+                    curriculaData = [{ ...parsed, title: curriculumTitle }];
+                } else {
+                    throw new Error('Invalid JSON format. Expected an array of curricula or a simplified curriculum object.');
                 }
             } catch (e) {
-                throw new Error('Invalid JSON format in Curricula field');
+                if (e instanceof Error) {
+                    throw e;
+                }
+                throw new Error('Invalid JSON syntax');
             }
 
             if (!Array.isArray(curriculaData) || curriculaData.length === 0) {
@@ -132,9 +157,9 @@ export default function CreateRoadmapManualPage() {
             }
 
             const roadmapData = {
-                title,
-                description,
-                domain,
+                title: currentTitle,
+                description: currentDescription,
+                domain: currentDomain,
                 curricula: curriculaData
             };
 
