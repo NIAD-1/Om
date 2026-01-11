@@ -6,7 +6,8 @@ import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { motion } from 'framer-motion';
 import { BookOpen, Calendar, Trash2, ChevronRight, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
-import { getCurricula, deleteCurriculum } from '@/lib/firestore';
+import { getCurricula, deleteCurriculum, getRoadmaps } from '@/lib/firestore';
+import { Roadmap } from '@/types/roadmap';
 
 interface SavedCurriculum {
   id: string;
@@ -49,10 +50,23 @@ function LearningPathsPage() {
       }
 
       try {
-        const data = await getCurricula(user.uid);
+        const [data, roadmaps] = await Promise.all([
+          getCurricula(user.uid),
+          getRoadmaps(user.uid)
+        ]);
 
-        // Filter out roadmap curricula (they belong to roadmaps, not standalone)
-        const standaloneCurricula = data.filter((c: any) => !c.isRoadmapCurriculum);
+        // Create a Set of all curriculum IDs that are part of roadmaps
+        const roadmapCurriculumIds = new Set<string>();
+        roadmaps.forEach((roadmap: Roadmap) => {
+          roadmap.curricula?.forEach(ref => {
+            roadmapCurriculumIds.add(ref.curriculumId);
+          });
+        });
+
+        // Filter out roadmap curricula (check both the flag and if they are in a roadmap)
+        const standaloneCurricula = data.filter((c: any) =>
+          !c.isRoadmapCurriculum && !roadmapCurriculumIds.has(c.id)
+        );
 
         // Filter by domain if specified
         const filtered = domainFilter
