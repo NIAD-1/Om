@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
-import { ArrowLeft, Sparkles, Copy, Loader2 } from 'lucide-react';
+import { ArrowLeft, Sparkles, Copy, Loader2, Check, MessageSquare } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
 import { saveRoadmap, saveCurriculum } from '@/lib/firestore';
 import { DOMAINS } from '@/lib/domains-config';
@@ -17,6 +17,52 @@ export default function CreateRoadmapManualPage() {
     const [jsonInput, setJsonInput] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+    const [promptCopied, setPromptCopied] = useState(false);
+
+    const chatGPTPrompt = `Create a detailed learning curriculum for [YOUR TOPIC] in JSON format.
+
+Structure it as:
+{
+  "modules": [
+    {
+      "id": "mod-1",
+      "name": "Module Name",
+      "topics": [
+        {
+          "id": "topic-1",
+          "name": "Topic Name",
+          "lessons": [
+            {
+              "id": "lesson-1",
+              "name": "Lesson Title",
+              "estimatedMinutes": 30,
+              "prerequisites": [],
+              "content": {
+                "summary": "Detailed explanation of the topic",
+                "resources": [
+                  {
+                    "type": "video",
+                    "title": "Video Title",
+                    "url": "https://youtube.com/watch?v=...",
+                    "duration": "15 min"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+
+Make it comprehensive with real YouTube URLs and articles. Include video timestamps if available.`;
+
+    const copyPrompt = () => {
+        navigator.clipboard.writeText(chatGPTPrompt);
+        setPromptCopied(true);
+        setTimeout(() => setPromptCopied(false), 2000);
+    };
 
     const exampleRoadmap = {
         curricula: [
@@ -271,6 +317,37 @@ export default function CreateRoadmapManualPage() {
                             placeholder="Brief overview of this learning path..."
                             className="w-full px-4 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white focus:outline-none focus:border-blue-500 h-24"
                         />
+                    </div>
+                </div>
+
+                {/* ChatGPT Prompt Template */}
+                <div className="card bg-gradient-to-r from-orange-500/10 to-red-500/10 border-orange-500/20">
+                    <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                            <MessageSquare className="h-5 w-5 text-orange-400" />
+                            <h3 className="font-semibold text-white">Use ChatGPT or Gemini</h3>
+                        </div>
+                        <button
+                            onClick={copyPrompt}
+                            className={`px-4 py-2 rounded-lg text-white text-sm font-medium transition-all flex items-center gap-2 ${promptCopied
+                                    ? 'bg-green-500 scale-105'
+                                    : 'bg-orange-500 hover:bg-orange-600'
+                                }`}
+                        >
+                            {promptCopied ? (
+                                <><Check className="h-4 w-4" /> Copied!</>
+                            ) : (
+                                <><Copy className="h-4 w-4" /> Copy Prompt</>
+                            )}
+                        </button>
+                    </div>
+                    <p className="text-sm text-slate-300 mb-3">
+                        Copy this prompt, paste it in ChatGPT or Gemini with your topic, then paste the result below.
+                    </p>
+                    <div className="bg-slate-950 rounded-lg p-3 max-h-32 overflow-y-auto">
+                        <pre className="text-xs text-slate-400 whitespace-pre-wrap font-mono">
+                            {chatGPTPrompt.slice(0, 200)}...
+                        </pre>
                     </div>
                 </div>
 
