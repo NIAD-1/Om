@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Sparkles, TrendingUp, Zap } from 'lucide-react';
+import { Sparkles, TrendingUp, Zap, Clock, BookOpen, Play } from 'lucide-react';
 import { DomainCard } from '@/components/dashboard/domain-card';
 import { ProgressOverview } from '@/components/dashboard/progress-overview';
 import { NewTrackInput } from '@/components/dashboard/new-track-input';
@@ -12,7 +12,7 @@ import { DOMAINS, ICON_MAP } from '@/lib/domains-config';
 import { generateCurriculum } from '@/lib/api-client';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/contexts/auth-context';
-import { saveCurriculum } from '@/lib/firestore';
+import { saveCurriculum, getActivityStats, getRecentActivities, ActivityEntry } from '@/lib/firestore';
 
 export default function DashboardPage() {
     const router = useRouter();
@@ -36,12 +36,34 @@ export default function DashboardPage() {
         { id: 'other', name: 'Other', emoji: '📖' },
     ];
 
-    const progressData = {
+    const [progressData, setProgressData] = useState({
         currentStreak: 0,
         completedThisWeek: 0,
         totalMastered: 0,
         nextMilestone: 'Complete first lesson',
-    };
+    });
+    const [recentActivities, setRecentActivities] = useState<ActivityEntry[]>([]);
+
+    useEffect(() => {
+        const loadStats = async () => {
+            if (!user) return;
+            try {
+                const stats = await getActivityStats(user.uid);
+                setProgressData({
+                    currentStreak: stats.currentStreak,
+                    completedThisWeek: stats.lessonsCompletedThisWeek,
+                    totalMastered: stats.totalMinutesThisWeek,
+                    nextMilestone: stats.lessonsCompletedThisWeek > 0 ? 'Keep learning!' : 'Complete first lesson',
+                });
+
+                const activities = await getRecentActivities(user.uid, 5);
+                setRecentActivities(activities);
+            } catch (e) {
+                console.error('Failed to load activity stats', e);
+            }
+        };
+        loadStats();
+    }, [user]);
 
     const handleGenerateCurriculum = async (field: string) => {
         setIsGenerating(true);
@@ -135,6 +157,44 @@ export default function DashboardPage() {
                         onDomainChange={setSelectedDomain}
                     />
                 </motion.div>
+
+                {/* Recent Activity Feed */}
+                {recentActivities.length > 0 && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.25 }}
+                        className="card"
+                    >
+                        <div className="flex items-center gap-2 mb-4">
+                            <Clock className="h-5 w-5 text-green-400" />
+                            <h2 className="text-xl font-semibold text-white">Recent Activity</h2>
+                        </div>
+                        <div className="space-y-3">
+                            {recentActivities.map((activity) => (
+                                <div
+                                    key={activity.id}
+                                    className="flex items-center gap-3 p-3 rounded-lg bg-slate-800/50 border border-slate-700"
+                                >
+                                    <div className={`p-2 rounded-lg ${activity.type === 'video_watch' ? 'bg-blue-500/20 text-blue-400' :
+                                            activity.type === 'lesson_complete' ? 'bg-green-500/20 text-green-400' :
+                                                'bg-purple-500/20 text-purple-400'
+                                        }`}>
+                                        {activity.type === 'video_watch' ? <Play className="h-4 w-4" /> : <BookOpen className="h-4 w-4" />}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-sm text-white truncate">
+                                            {activity.minutesSpent} min on <span className="text-blue-400">{activity.lessonName}</span>
+                                        </p>
+                                        <p className="text-xs text-slate-500 truncate">
+                                            {activity.curriculumTitle} • {new Date(activity.timestamp).toLocaleDateString()}
+                                        </p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </motion.div>
+                )}
 
                 {/* Domains Grid */}
                 <motion.div

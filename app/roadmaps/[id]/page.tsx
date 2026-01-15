@@ -70,7 +70,7 @@ export default function RoadmapDetailPage() {
             alert('🔒 Complete the previous step first!');
             return;
         }
-        router.push(`/learning-paths/${curriculum.id}`);
+        router.push(`/learning-paths/${curriculum.id}?fromRoadmap=${roadmapId}`);
     };
 
     if (!roadmap) {

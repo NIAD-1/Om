@@ -6,8 +6,9 @@ import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { ArrowLeft, Clock, BookOpen, ExternalLink } from 'lucide-react';
 import AITutorSidebar from '@/components/ai-tutor/ai-tutor-sidebar';
 import { useAuth } from '@/contexts/auth-context';
-import { getCurricula, saveProgress, getProgress, saveVideoProgress } from '@/lib/firestore';
+import { getCurricula, saveProgress, getProgress, saveVideoProgress, logActivity } from '@/lib/firestore';
 import YouTube from 'react-youtube';
+import { useRef } from 'react';
 
 export default function LessonPage() {
     const router = useRouter();
@@ -19,6 +20,10 @@ export default function LessonPage() {
     const [lesson, setLesson] = useState<any>(null);
     const [curriculumTitle, setCurriculumTitle] = useState('');
     const [savedTimestamp, setSavedTimestamp] = useState(0);
+    const videoStartTimeRef = useRef<number>(0);
+    const lastSavedTimeRef = useRef<number>(0);
+    const playerRef = useRef<any>(null);
+    const autoSaveIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
     useEffect(() => {
         const loadLesson = async () => {
@@ -196,17 +201,81 @@ export default function LessonPage() {
                                                             },
                                                         }}
                                                         className="absolute inset-0 w-full h-full"
-                                                        onStateChange={async (event) => {
-                                                            // Save progress when paused (2) or ended (0)
-                                                            if (user && (event.data === 2 || event.data === 0)) {
-                                                                const time = await event.target.getCurrentTime();
-                                                                await saveVideoProgress(user.uid, curriculumId, lessonId, Math.floor(time));
+                                                        onReady={(event) => {
+                                                            playerRef.current = event.target;
+                                                        }}
+                                                        onPlay={async (event) => {
+                                                            // Record when video started playing
+                                                            const currentTime = await event.target.getCurrentTime();
+                                                            videoStartTimeRef.current = currentTime;
+                                                            lastSavedTimeRef.current = currentTime;
+
+                                                            // Start auto-save interval (every 30 seconds)
+                                                            if (autoSaveIntervalRef.current) {
+                                                                clearInterval(autoSaveIntervalRef.current);
                                                             }
+                                                            autoSaveIntervalRef.current = setInterval(async () => {
+                                                                if (playerRef.current && user) {
+                                                                    const time = await playerRef.current.getCurrentTime();
+                                                                    await saveVideoProgress(user.uid, curriculumId, lessonId, Math.floor(time));
+
+                                                                    // Log activity every 30 seconds of watching
+                                                                    const minutesWatched = Math.floor((time - lastSavedTimeRef.current) / 60);
+                                                                    if (minutesWatched >= 1) {
+                                                                        await logActivity(user.uid, {
+                                                                            type: 'video_watch',
+                                                                            curriculumId,
+                                                                            curriculumTitle,
+                                                                            lessonId,
+                                                                            lessonName: lesson?.name || 'Unknown Lesson',
+                                                                            minutesSpent: minutesWatched
+                                                                        });
+                                                                        lastSavedTimeRef.current = time;
+                                                                    }
+                                                                }
+                                                            }, 30000);
                                                         }}
                                                         onPause={async (event) => {
                                                             if (user) {
                                                                 const time = await event.target.getCurrentTime();
                                                                 await saveVideoProgress(user.uid, curriculumId, lessonId, Math.floor(time));
+
+                                                                // Log time watched since start/last save
+                                                                const minutesWatched = Math.max(1, Math.floor((time - videoStartTimeRef.current) / 60));
+                                                                if (minutesWatched > 0) {
+                                                                    await logActivity(user.uid, {
+                                                                        type: 'video_watch',
+                                                                        curriculumId,
+                                                                        curriculumTitle,
+                                                                        lessonId,
+                                                                        lessonName: lesson?.name || 'Unknown Lesson',
+                                                                        minutesSpent: minutesWatched
+                                                                    });
+                                                                }
+
+                                                                // Clear interval
+                                                                if (autoSaveIntervalRef.current) {
+                                                                    clearInterval(autoSaveIntervalRef.current);
+                                                                }
+                                                            }
+                                                        }}
+                                                        onEnd={async (event) => {
+                                                            if (user) {
+                                                                const duration = await event.target.getDuration();
+                                                                const minutesWatched = Math.max(1, Math.floor((duration - videoStartTimeRef.current) / 60));
+
+                                                                await logActivity(user.uid, {
+                                                                    type: 'video_watch',
+                                                                    curriculumId,
+                                                                    curriculumTitle,
+                                                                    lessonId,
+                                                                    lessonName: lesson?.name || 'Unknown Lesson',
+                                                                    minutesSpent: minutesWatched
+                                                                });
+
+                                                                if (autoSaveIntervalRef.current) {
+                                                                    clearInterval(autoSaveIntervalRef.current);
+                                                                }
                                                             }
                                                         }}
                                                     />

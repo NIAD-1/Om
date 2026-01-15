@@ -146,3 +146,112 @@ export async function getProjectTasks(userId: string, projectId: string): Promis
     }
     return [];
 }
+
+// ====== ACTIVITY LOG ======
+
+export interface ActivityEntry {
+    id: string;
+    type: 'video_watch' | 'lesson_complete' | 'quiz_pass' | 'exam_pass' | 'project_task';
+    curriculumId: string;
+    curriculumTitle: string;
+    lessonId?: string;
+    lessonName?: string;
+    roadmapId?: string;
+    roadmapTitle?: string;
+    minutesSpent: number;
+    timestamp: string;
+}
+
+export async function logActivity(userId: string, activity: Omit<ActivityEntry, 'id' | 'timestamp'>) {
+    const activityId = crypto.randomUUID();
+    const docRef = doc(db, getUserPath(userId, 'activityLog'), activityId);
+    await setDoc(docRef, {
+        ...activity,
+        id: activityId,
+        timestamp: new Date().toISOString(),
+    });
+}
+
+export async function getRecentActivities(userId: string, limit: number = 10): Promise<ActivityEntry[]> {
+    const q = query(collection(db, getUserPath(userId, 'activityLog')));
+    const snapshot = await getDocs(q);
+    const activities = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ActivityEntry));
+    // Sort by timestamp descending and limit
+    return activities
+        .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+        .slice(0, limit);
+}
+
+export async function getActivityStats(userId: string): Promise<{
+    totalMinutesToday: number;
+    totalMinutesThisWeek: number;
+    lessonsCompletedThisWeek: number;
+    currentStreak: number;
+}> {
+    const activities = await getRecentActivities(userId, 1000); // Get all recent
+
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const weekStart = new Date(todayStart);
+    weekStart.setDate(weekStart.getDate() - weekStart.getDay()); // Start of week (Sunday)
+
+    let totalMinutesToday = 0;
+    let totalMinutesThisWeek = 0;
+    let lessonsCompletedThisWeek = 0;
+
+    activities.forEach(activity => {
+        const activityDate = new Date(activity.timestamp);
+
+        if (activityDate >= todayStart) {
+            totalMinutesToday += activity.minutesSpent;
+        }
+
+        if (activityDate >= weekStart) {
+            totalMinutesThisWeek += activity.minutesSpent;
+            if (activity.type === 'lesson_complete') {
+                lessonsCompletedThisWeek++;
+            }
+        }
+    });
+
+    // Calculate streak (consecutive days with activity)
+    let currentStreak = 0;
+    const dayChecked = new Set<string>();
+    const sortedActivities = [...activities].sort((a, b) =>
+        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    );
+
+    for (const activity of sortedActivities) {
+        const dateStr = new Date(activity.timestamp).toDateString();
+        if (!dayChecked.has(dateStr)) {
+            dayChecked.add(dateStr);
+        }
+    }
+
+    // Count consecutive days from today backwards
+    const checkDate = new Date(todayStart);
+    for (let i = 0; i < 365; i++) {
+        if (dayChecked.has(checkDate.toDateString())) {
+            currentStreak++;
+            checkDate.setDate(checkDate.getDate() - 1);
+        } else if (i === 0) {
+            // Today might not have activity yet, check yesterday
+            checkDate.setDate(checkDate.getDate() - 1);
+            if (dayChecked.has(checkDate.toDateString())) {
+                currentStreak++;
+                checkDate.setDate(checkDate.getDate() - 1);
+            } else {
+                break;
+            }
+        } else {
+            break;
+        }
+    }
+
+    return {
+        totalMinutesToday,
+        totalMinutesThisWeek,
+        lessonsCompletedThisWeek,
+        currentStreak
+    };
+}

@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { useRouter, useParams } from 'next/navigation';
+import React, { useEffect, useState, Suspense } from 'react';
+import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     ChevronDown,
@@ -10,17 +10,34 @@ import {
     PlayCircle,
     Clock,
     ArrowLeft,
-    Code
+    Code,
+    Loader2
 } from 'lucide-react';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import type { Module, Topic, Lesson } from '@/types/curriculum';
 import { useAuth } from '@/contexts/auth-context';
 import { getCurricula } from '@/lib/firestore';
 
-export default function CurriculumViewPage() {
+export default function CurriculumViewPageWrapper() {
+    return (
+        <Suspense fallback={
+            <DashboardLayout>
+                <div className="flex items-center justify-center min-h-[400px]">
+                    <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+                </div>
+            </DashboardLayout>
+        }>
+            <CurriculumViewPage />
+        </Suspense>
+    );
+}
+
+function CurriculumViewPage() {
     const router = useRouter();
     const params = useParams();
+    const searchParams = useSearchParams();
     const id = params.id as string;
+    const fromRoadmap = searchParams.get('fromRoadmap');
     const { user } = useAuth();
 
     const [curriculum, setCurriculum] = useState<any>(null);
@@ -77,7 +94,7 @@ export default function CurriculumViewPage() {
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
                         <button
-                            onClick={() => router.push('/learning-paths')}
+                            onClick={() => router.push(fromRoadmap ? `/roadmaps/${fromRoadmap}` : '/learning-paths')}
                             className="p-2 rounded-lg bg-slate-800/50 hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"
                         >
                             <ArrowLeft className="h-5 w-5" />
