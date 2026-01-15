@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Sparkles, TrendingUp, Zap, Clock, BookOpen, Play } from 'lucide-react';
+import { Sparkles, TrendingUp, Zap, Clock, BookOpen, Play, HelpCircle } from 'lucide-react';
 import { DomainCard } from '@/components/dashboard/domain-card';
 import { ProgressOverview } from '@/components/dashboard/progress-overview';
 import { NewTrackInput } from '@/components/dashboard/new-track-input';
@@ -13,6 +13,7 @@ import { generateCurriculum } from '@/lib/api-client';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/contexts/auth-context';
 import { saveCurriculum, getActivityStats, getRecentActivities, ActivityEntry } from '@/lib/firestore';
+import { OnboardingModal } from '@/components/onboarding/onboarding-modal';
 
 export default function DashboardPage() {
     const router = useRouter();
@@ -20,6 +21,16 @@ export default function DashboardPage() {
     const [isGenerating, setIsGenerating] = useState(false);
     const [selectedDomain, setSelectedDomain] = useState('technology');
     const [domainCards] = useState(DOMAINS);
+    const [showOnboarding, setShowOnboarding] = useState(false);
+
+    // Check if first visit and show onboarding
+    useEffect(() => {
+        const hasSeenOnboarding = localStorage.getItem('hasSeenOnboarding');
+        if (!hasSeenOnboarding) {
+            setShowOnboarding(true);
+            localStorage.setItem('hasSeenOnboarding', 'true');
+        }
+    }, []);
 
     const domainCategories = [
         { id: 'technology', name: 'Technology', emoji: '💻' },
@@ -104,6 +115,7 @@ export default function DashboardPage() {
     return (
         <DashboardLayout>
             {isGenerating && <LoadingAI />}
+            <OnboardingModal isOpen={showOnboarding} onClose={() => setShowOnboarding(false)} />
 
             <div className="space-y-8">
                 {/* Welcome Section */}
@@ -125,6 +137,13 @@ export default function DashboardPage() {
                             <Zap className="h-4 w-4" />
                             <span className="text-sm font-medium">All Systems Active</span>
                         </div>
+                        <button
+                            onClick={() => setShowOnboarding(true)}
+                            className="p-2 rounded-lg bg-slate-800/50 hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"
+                            title="Show Tutorial"
+                        >
+                            <HelpCircle className="h-5 w-5" />
+                        </button>
                     </div>
                 </motion.div>
 
@@ -177,8 +196,8 @@ export default function DashboardPage() {
                                     className="flex items-center gap-3 p-3 rounded-lg bg-slate-800/50 border border-slate-700"
                                 >
                                     <div className={`p-2 rounded-lg ${activity.type === 'video_watch' ? 'bg-blue-500/20 text-blue-400' :
-                                            activity.type === 'lesson_complete' ? 'bg-green-500/20 text-green-400' :
-                                                'bg-purple-500/20 text-purple-400'
+                                        activity.type === 'lesson_complete' ? 'bg-green-500/20 text-green-400' :
+                                            'bg-purple-500/20 text-purple-400'
                                         }`}>
                                         {activity.type === 'video_watch' ? <Play className="h-4 w-4" /> : <BookOpen className="h-4 w-4" />}
                                     </div>
