@@ -24,6 +24,9 @@ import {
 import { useAuth } from '@/contexts/auth-context';
 import { getCurricula, getRoadmaps } from '@/lib/firestore';
 import { DOMAINS } from '@/lib/domains-config';
+import { getFeaturedByDomain, FeaturedCurriculum, FeaturedRoadmap } from '@/lib/featured-content';
+import { DocumentReader, useDocumentReader } from '@/components/reader/document-reader';
+import { Star, Play } from 'lucide-react';
 
 interface NewsArticle {
     title: string;
@@ -68,6 +71,7 @@ export default function DomainPage() {
     const params = useParams();
     const domainId = params.domainId as string;
     const { user } = useAuth();
+    const { readerState, openReader, closeReader } = useDocumentReader();
 
     const [curricula, setCurricula] = useState<any[]>([]);
     const [roadmaps, setRoadmaps] = useState<any[]>([]);
@@ -76,8 +80,16 @@ export default function DomainPage() {
     const [loading, setLoading] = useState(true);
     const [loadingNews, setLoadingNews] = useState(true);
 
+    // Featured content
+    const [featured, setFeatured] = useState<{ curricula: FeaturedCurriculum[], roadmaps: FeaturedRoadmap[] }>({ curricula: [], roadmaps: [] });
+
     const domain = DOMAINS.find(d => d.id === domainId);
     const subFields = SUB_FIELDS[domainId] || [];
+
+    // Load featured content on mount
+    useEffect(() => {
+        setFeatured(getFeaturedByDomain(domainId));
+    }, [domainId]);
 
     useEffect(() => {
         const loadContent = async () => {
@@ -186,6 +198,44 @@ export default function DomainPage() {
                                     </button>
                                 );
                             })}
+                        </div>
+                    </motion.div>
+                )}
+
+                {/* Featured Curricula */}
+                {featured.curricula.length > 0 && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.15 }}
+                    >
+                        <div className="flex items-center gap-2 mb-4">
+                            <Star className="h-5 w-5 text-yellow-400" />
+                            <h2 className="text-xl font-semibold text-white">Featured Learning Paths</h2>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {featured.curricula.map((curriculum) => (
+                                <button
+                                    key={curriculum.id}
+                                    onClick={() => router.push(`/learning-paths/${curriculum.id}`)}
+                                    className="p-4 rounded-xl bg-gradient-to-br from-yellow-500/10 to-orange-500/10 border border-yellow-500/20 hover:border-yellow-500/40 text-left transition-all group"
+                                >
+                                    <div className="flex items-start justify-between mb-2">
+                                        <h3 className="font-semibold text-white group-hover:text-yellow-400 transition-colors">
+                                            {curriculum.field}
+                                        </h3>
+                                        <span className="px-2 py-1 rounded-full bg-yellow-500/20 text-yellow-400 text-xs capitalize">
+                                            {curriculum.difficulty}
+                                        </span>
+                                    </div>
+                                    <p className="text-sm text-slate-400 line-clamp-2 mb-2">{curriculum.description}</p>
+                                    <div className="flex items-center gap-3 text-xs text-slate-500">
+                                        <span>{curriculum.estimatedHours}h</span>
+                                        <span>•</span>
+                                        <span>{curriculum.modules.length} modules</span>
+                                    </div>
+                                </button>
+                            ))}
                         </div>
                     </motion.div>
                 )}
@@ -359,6 +409,16 @@ export default function DomainPage() {
                     </div>
                 </div>
             </div>
+
+            {/* Document Reader Modal */}
+            {readerState.isOpen && (
+                <DocumentReader
+                    url={readerState.url}
+                    title={readerState.title}
+                    type={readerState.type}
+                    onClose={closeReader}
+                />
+            )}
         </DashboardLayout>
     );
 }
