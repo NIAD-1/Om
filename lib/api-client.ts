@@ -1,10 +1,9 @@
 /**
- * API client for Next.js API routes (development) and Netlify Functions (production)
+ * API client for Next.js API routes (works on both local dev and Vercel)
  */
 
-// Use Next.js API routes for development, Netlify Functions for production
-const isDev = process.env.NODE_ENV === 'development';
-const apiBase = isDev ? '/api' : '/.netlify/functions';
+// Always use Next.js API routes (works on Vercel and local dev)
+const apiBase = '/api';
 
 export async function generateCurriculum(field: string, subdomain?: string) {
     const response = await fetch(`${apiBase}/generate-curriculum`, {
