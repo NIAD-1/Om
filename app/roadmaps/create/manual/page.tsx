@@ -3,10 +3,11 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
-import { ArrowLeft, Sparkles, Copy, Loader2, Check, MessageSquare } from 'lucide-react';
+import { ArrowLeft, Sparkles, Copy, Loader2, Check, MessageSquare, ExternalLink } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
 import { saveRoadmap, saveCurriculum } from '@/lib/firestore';
 import { DOMAINS } from '@/lib/domains-config';
+import { ChatGPTOpener, useChatGPTOpener } from '@/components/integration/chatgpt-opener';
 
 export default function CreateRoadmapManualPage() {
     const router = useRouter();
@@ -18,6 +19,7 @@ export default function CreateRoadmapManualPage() {
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const [promptCopied, setPromptCopied] = useState(false);
+    const { state: chatGPTState, openWithPrompt, close: closeChatGPT } = useChatGPTOpener();
 
     const chatGPTPrompt = `Create a UNIVERSITY-GRADE learning roadmap for [YOUR TOPIC] in JSON format. Make it as comprehensive as an actual university course with proper depth and progression.
 
@@ -340,6 +342,12 @@ Include REAL YouTube URLs from reputable sources (MIT OpenCourseWare, Stanford, 
                                 <><Copy className="h-4 w-4" /> Copy Prompt</>
                             )}
                         </button>
+                        <button
+                            onClick={() => openWithPrompt(chatGPTPrompt)}
+                            className="px-4 py-2 rounded-lg bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white text-sm font-medium transition-all flex items-center gap-2"
+                        >
+                            <ExternalLink className="h-4 w-4" /> Open ChatGPT
+                        </button>
                     </div>
                     <p className="text-sm text-slate-300 mb-3">
                         Copy this prompt, paste it in ChatGPT or Gemini with your topic, then paste the result below.
@@ -421,6 +429,13 @@ Include REAL YouTube URLs from reputable sources (MIT OpenCourseWare, Stanford, 
                     </button>
                 </div>
             </div>
+
+            {/* ChatGPT Opener Modal */}
+            <ChatGPTOpener
+                prompt={chatGPTState.prompt}
+                isOpen={chatGPTState.isOpen}
+                onClose={closeChatGPT}
+            />
         </DashboardLayout>
     );
 }
