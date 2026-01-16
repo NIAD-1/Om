@@ -5,6 +5,14 @@ const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
 
 export async function POST(request: NextRequest) {
   try {
+    // Check if API key is configured
+    if (!GROQ_API_KEY) {
+      console.error('GROQ_API_KEY is not configured');
+      return NextResponse.json({
+        error: 'API key not configured. Please add GROQ_API_KEY to environment variables.'
+      }, { status: 500 });
+    }
+
     const { field, subdomain } = await request.json();
 
     if (!field) {
