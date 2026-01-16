@@ -217,7 +217,7 @@ export default function DomainPage() {
                             {featured.curricula.map((curriculum) => (
                                 <button
                                     key={curriculum.id}
-                                    onClick={() => router.push(`/learning-paths/${curriculum.id}`)}
+                                    onClick={() => router.push(`/learning-paths/featured/${curriculum.id}`)}
                                     className="p-4 rounded-xl bg-gradient-to-br from-yellow-500/10 to-orange-500/10 border border-yellow-500/20 hover:border-yellow-500/40 text-left transition-all group"
                                 >
                                     <div className="flex items-start justify-between mb-2">
