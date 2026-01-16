@@ -123,7 +123,7 @@ export default function CreateRoadmapPage() {
                 </div>
 
                 {/* Tabs */}
-                <div className="flex gap-2 p-1 bg-slate-900 rounded-lg border border-slate-800">
+                <div id="create-roadmap-options" className="flex gap-2 p-1 bg-slate-900 rounded-lg border border-slate-800">
                     <button
                         onClick={() => setActiveTab('ai')}
                         className={`flex-1 px-4 py-3 rounded-lg font-medium transition-all flex items-center justify-center gap-2 ${activeTab === 'ai'

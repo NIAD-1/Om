@@ -19,7 +19,7 @@ export default function CreateRoadmapManualPage() {
     const [loading, setLoading] = useState(false);
     const [promptCopied, setPromptCopied] = useState(false);
 
-    const chatGPTPrompt = `Create a detailed learning curriculum for [YOUR TOPIC] in JSON format.
+    const chatGPTPrompt = `Create a UNIVERSITY-GRADE learning roadmap for [YOUR TOPIC] in JSON format. Make it as comprehensive as an actual university course with proper depth and progression.
 
 Structure it as:
 {
@@ -38,7 +38,7 @@ Structure it as:
               "estimatedMinutes": 30,
               "prerequisites": [],
               "content": {
-                "summary": "Detailed explanation of the topic",
+                "summary": "Detailed explanation like a university lecture",
                 "resources": [
                   {
                     "type": "video",
@@ -56,7 +56,7 @@ Structure it as:
   ]
 }
 
-Make it comprehensive with real YouTube URLs and articles. Include video timestamps if available.`;
+Include REAL YouTube URLs from reputable sources (MIT OpenCourseWare, Stanford, freeCodeCamp, etc). Add video timestamps for different sections if available.`;
 
     const copyPrompt = () => {
         navigator.clipboard.writeText(chatGPTPrompt);
@@ -321,7 +321,7 @@ Make it comprehensive with real YouTube URLs and articles. Include video timesta
                 </div>
 
                 {/* ChatGPT Prompt Template */}
-                <div className="card bg-gradient-to-r from-orange-500/10 to-red-500/10 border-orange-500/20">
+                <div id="chatgpt-prompt-section" className="card bg-gradient-to-r from-orange-500/10 to-red-500/10 border-orange-500/20">
                     <div className="flex items-start justify-between mb-3">
                         <div className="flex items-center gap-2">
                             <MessageSquare className="h-5 w-5 text-orange-400" />
@@ -330,8 +330,8 @@ Make it comprehensive with real YouTube URLs and articles. Include video timesta
                         <button
                             onClick={copyPrompt}
                             className={`px-4 py-2 rounded-lg text-white text-sm font-medium transition-all flex items-center gap-2 ${promptCopied
-                                    ? 'bg-green-500 scale-105'
-                                    : 'bg-orange-500 hover:bg-orange-600'
+                                ? 'bg-green-500 scale-105'
+                                : 'bg-orange-500 hover:bg-orange-600'
                                 }`}
                         >
                             {promptCopied ? (

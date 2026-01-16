@@ -14,6 +14,7 @@ import { motion } from 'framer-motion';
 import { useAuth } from '@/contexts/auth-context';
 import { saveCurriculum, getActivityStats, getRecentActivities, ActivityEntry } from '@/lib/firestore';
 import { OnboardingModal } from '@/components/onboarding/onboarding-modal';
+import { StreakWidget } from '@/components/gamification/streak-widget';
 
 export default function DashboardPage() {
     const router = useRouter();
@@ -52,6 +53,7 @@ export default function DashboardPage() {
         completedThisWeek: 0,
         totalMastered: 0,
         nextMilestone: 'Complete first lesson',
+        todayMinutes: 0,
     });
     const [recentActivities, setRecentActivities] = useState<ActivityEntry[]>([]);
 
@@ -65,6 +67,7 @@ export default function DashboardPage() {
                     completedThisWeek: stats.lessonsCompletedThisWeek,
                     totalMastered: stats.totalMinutesThisWeek,
                     nextMilestone: stats.lessonsCompletedThisWeek > 0 ? 'Keep learning!' : 'Complete first lesson',
+                    todayMinutes: stats.totalMinutesToday,
                 });
 
                 const activities = await getRecentActivities(user.uid, 5);
@@ -120,6 +123,7 @@ export default function DashboardPage() {
             <div className="space-y-8">
                 {/* Welcome Section */}
                 <motion.div
+                    id="dashboard-welcome"
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     className="rounded-2xl bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-pink-500/10 border border-blue-500/20 p-8"
@@ -137,18 +141,26 @@ export default function DashboardPage() {
                             <Zap className="h-4 w-4" />
                             <span className="text-sm font-medium">All Systems Active</span>
                         </div>
-                        <button
-                            onClick={() => setShowOnboarding(true)}
-                            className="p-2 rounded-lg bg-slate-800/50 hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"
-                            title="Show Tutorial"
-                        >
-                            <HelpCircle className="h-5 w-5" />
-                        </button>
+                        <div className="flex items-center gap-3">
+                            <StreakWidget
+                                currentStreak={progressData.currentStreak}
+                                todayMinutes={progressData.todayMinutes}
+                                dailyGoal={15}
+                            />
+                            <button
+                                onClick={() => setShowOnboarding(true)}
+                                className="p-2 rounded-lg bg-slate-800/50 hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"
+                                title="Show Tutorial"
+                            >
+                                <HelpCircle className="h-5 w-5" />
+                            </button>
+                        </div>
                     </div>
                 </motion.div>
 
                 {/* Progress Overview */}
                 <motion.div
+                    id="progress-overview"
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.1 }}
@@ -162,6 +174,7 @@ export default function DashboardPage() {
 
                 {/* New Track Generator */}
                 <motion.div
+                    id="new-track-input"
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.2 }}
@@ -217,6 +230,7 @@ export default function DashboardPage() {
 
                 {/* Domains Grid */}
                 <motion.div
+                    id="domain-grid"
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.3 }}

@@ -57,7 +57,7 @@ export default function RoadmapsPage() {
     return (
         <DashboardLayout>
             <div className="max-w-4xl mx-auto">
-                <div className="mb-8 flex items-center justify-between">
+                <div id="roadmaps-header" className="mb-8 flex items-center justify-between">
                     <div>
                         <h1 className="text-3xl font-bold text-white mb-2">Career Roadmaps</h1>
                         <p className="text-slate-400">
@@ -78,8 +78,8 @@ export default function RoadmapsPage() {
                     <button
                         onClick={() => setSelectedDomain('all')}
                         className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${selectedDomain === 'all'
-                                ? 'bg-blue-500 text-white'
-                                : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                            ? 'bg-blue-500 text-white'
+                            : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
                             }`}
                     >
                         All
@@ -89,8 +89,8 @@ export default function RoadmapsPage() {
                             key={domain.id}
                             onClick={() => setSelectedDomain(domain.id)}
                             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${selectedDomain === domain.id
-                                    ? 'bg-blue-500 text-white'
-                                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                                ? 'bg-blue-500 text-white'
+                                : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
                                 }`}
                         >
                             {domain.name}

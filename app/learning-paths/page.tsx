@@ -115,7 +115,7 @@ function LearningPathsPage() {
   return (
     <DashboardLayout>
       <div className="max-w-4xl mx-auto">
-        <div className="mb-8 flex items-center justify-between">
+        <div id="learning-paths-header" className="mb-8 flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-white mb-2">Learning Paths</h1>
             <p className="text-slate-400">
