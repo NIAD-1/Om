@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
-import { ArrowLeft, Clock, BookOpen, ExternalLink } from 'lucide-react';
+import { ArrowLeft, Clock, BookOpen, ExternalLink, Play, SkipForward } from 'lucide-react';
 import AITutorSidebar from '@/components/ai-tutor/ai-tutor-sidebar';
 import { useAuth } from '@/contexts/auth-context';
 import { getCurricula, saveProgress, getProgress, saveVideoProgress, logActivity } from '@/lib/firestore';
@@ -24,6 +24,7 @@ export default function LessonPage() {
     const lastSavedTimeRef = useRef<number>(0);
     const playerRef = useRef<any>(null);
     const autoSaveIntervalRef = useRef<NodeJS.Timeout | null>(null);
+    const endTimeCheckRef = useRef<NodeJS.Timeout | null>(null);
 
     useEffect(() => {
         const loadLesson = async () => {
@@ -87,9 +88,11 @@ export default function LessonPage() {
         Resources: ${lesson.content?.resources?.map((r: any) => r.title).join(', ') || 'None'}
     `;
 
-    const getYouTubeEmbed = (url: string): { videoId: string | null, startTime: number } => {
+    const getYouTubeEmbed = (url: string, resource?: any): { videoId: string | null, startTime: number, endTime: number | null, chapters: Array<{ title: string, time: number }> } => {
         let videoId = null;
         let startTime = 0;
+        let endTime: number | null = null;
+        let chapters: Array<{ title: string, time: number }> = [];
 
         // Extract video ID
         if (url.includes('watch?v=')) {
@@ -104,7 +107,32 @@ export default function LessonPage() {
             startTime = parseInt(timeMatch[1], 10);
         }
 
-        return { videoId, startTime };
+        // Check for startTime/endTime in resource object
+        if (resource?.startTime) {
+            startTime = resource.startTime;
+        }
+        if (resource?.endTime) {
+            endTime = resource.endTime;
+        }
+        if (resource?.chapters) {
+            chapters = resource.chapters;
+        }
+
+        return { videoId, startTime, endTime, chapters };
+    };
+
+    // Function to seek to specific timestamp
+    const seekToTime = (time: number) => {
+        if (playerRef.current) {
+            playerRef.current.seekTo(time, true);
+        }
+    };
+
+    // Format seconds to MM:SS
+    const formatTime = (seconds: number) => {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${mins}:${secs.toString().padStart(2, '0')}`;
     };
 
     return (
@@ -151,7 +179,7 @@ export default function LessonPage() {
                         <h2 className="text-xl font-semibold text-white mb-4">📚 Learning Resources</h2>
                         <div className="space-y-6">
                             {lesson.content.resources.map((resource: any, idx: number) => {
-                                const ytData = resource.type === 'video' ? getYouTubeEmbed(resource.url) : { videoId: null, startTime: 0 };
+                                const ytData = resource.type === 'video' ? getYouTubeEmbed(resource.url, resource) : { videoId: null, startTime: 0, endTime: null, chapters: [] };
                                 const isArticle = resource.type === 'article';
                                 const isPaper = resource.type === 'paper' || resource.type === 'journal';
 
@@ -279,6 +307,39 @@ export default function LessonPage() {
                                                             }
                                                         }}
                                                     />
+                                                </div>
+                                            )}
+
+                                            {/* Video Chapters/Timestamps */}
+                                            {ytData.chapters && ytData.chapters.length > 0 && (
+                                                <div className="p-3 bg-slate-800/50 border-t border-slate-700">
+                                                    <p className="text-xs text-slate-400 mb-2 flex items-center gap-1">
+                                                        <SkipForward className="h-3 w-3" />
+                                                        Chapters
+                                                    </p>
+                                                    <div className="flex flex-wrap gap-2">
+                                                        {ytData.chapters.map((chapter, cidx) => (
+                                                            <button
+                                                                key={cidx}
+                                                                onClick={() => seekToTime(chapter.time)}
+                                                                className="px-2 py-1 text-xs rounded bg-slate-700 hover:bg-slate-600 text-slate-300 transition-colors flex items-center gap-1"
+                                                            >
+                                                                <Play className="h-3 w-3" />
+                                                                {formatTime(chapter.time)} - {chapter.title}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Timestamp indicator */}
+                                            {(ytData.startTime > 0 || ytData.endTime) && (
+                                                <div className="px-3 py-2 bg-blue-500/10 border-t border-blue-500/20">
+                                                    <p className="text-xs text-blue-400">
+                                                        📍 Playing: {formatTime(ytData.startTime)}
+                                                        {ytData.endTime && ` - ${formatTime(ytData.endTime)}`}
+                                                        {ytData.endTime && ` (${formatTime(ytData.endTime - ytData.startTime)} segment)`}
+                                                    </p>
                                                 </div>
                                             )}
 

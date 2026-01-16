@@ -56,11 +56,14 @@ The curriculum must follow this exact structure:
 
 CRITICAL REQUIREMENTS:
 1. Use REAL, AUTHORITATIVE resources (MIT OCW, 3Blue1Brown, Khan Academy, official documentation)
-2. Structure from foundational to advanced concepts
-3. Create logical prerequisite chains
-4. Each lesson should have 2-4 high-quality resources
-5. Estimated times should be realistic
-6. Return ONLY valid JSON, no markdown formatting`;
+2. PREFER RECENT CONTENT: Prioritize resources from 2022-2024 when available for up-to-date information
+3. Structure from foundational to advanced concepts
+4. Create logical prerequisite chains
+5. Each lesson should have 2-4 high-quality resources
+6. Estimated times should be realistic
+7. For videos, include "startTime" and "endTime" (in seconds) if only a portion is relevant
+8. Include "chapters" array with {title, time} for key video sections when applicable
+9. Return ONLY valid JSON, no markdown formatting`;
 
     const userPrompt = subdomain
       ? `Generate a mastery-based curriculum for: ${field} - ${subdomain}`
