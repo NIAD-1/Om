@@ -12,9 +12,10 @@ import { DOMAINS, ICON_MAP } from '@/lib/domains-config';
 import { generateCurriculum } from '@/lib/api-client';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/contexts/auth-context';
-import { saveCurriculum, getActivityStats, getRecentActivities, ActivityEntry } from '@/lib/firestore';
+import { saveCurriculum, getActivityStats, getRecentActivities, ActivityEntry, hasCompletedOnboarding, saveUserInterests, UserInterests } from '@/lib/firestore';
 import { OnboardingModal } from '@/components/onboarding/onboarding-modal';
 import { StreakWidget } from '@/components/gamification/streak-widget';
+import { InterestsSelector } from '@/components/onboarding/interests-selector';
 
 export default function DashboardPage() {
     const router = useRouter();
@@ -23,8 +24,31 @@ export default function DashboardPage() {
     const [selectedDomain, setSelectedDomain] = useState('technology');
     const [domainCards] = useState(DOMAINS);
     const [showOnboarding, setShowOnboarding] = useState(false);
+    const [showInterests, setShowInterests] = useState(false);
+    const [checkingOnboarding, setCheckingOnboarding] = useState(true);
 
-    // Check if first visit and show onboarding
+    // Check if user has completed interest selection
+    useEffect(() => {
+        const checkOnboardingStatus = async () => {
+            if (!user) {
+                setCheckingOnboarding(false);
+                return;
+            }
+            try {
+                const completed = await hasCompletedOnboarding(user.uid);
+                if (!completed) {
+                    setShowInterests(true);
+                }
+            } catch (e) {
+                console.error('Error checking onboarding', e);
+            } finally {
+                setCheckingOnboarding(false);
+            }
+        };
+        checkOnboardingStatus();
+    }, [user]);
+
+    // Show tutorial after interests are selected
     useEffect(() => {
         const hasSeenOnboarding = localStorage.getItem('hasSeenOnboarding');
         if (!hasSeenOnboarding) {
@@ -112,8 +136,32 @@ export default function DashboardPage() {
     };
 
     const handleSelectDomain = (domainId: string) => {
-        router.push(`/learning-paths?domain=${domainId}`);
+        router.push(`/domains/${domainId}`);
     };
+
+    const handleInterestsComplete = async (interests: UserInterests) => {
+        if (user) {
+            await saveUserInterests(user.uid, interests);
+        }
+        setShowInterests(false);
+        setShowOnboarding(true); // Start the tutorial after interests
+    };
+
+    // Show loading while checking onboarding
+    if (checkingOnboarding) {
+        return (
+            <DashboardLayout>
+                <div className="flex items-center justify-center min-h-[400px]">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                </div>
+            </DashboardLayout>
+        );
+    }
+
+    // Show interests selector for new users
+    if (showInterests) {
+        return <InterestsSelector onComplete={handleInterestsComplete} />;
+    }
 
     return (
         <DashboardLayout>

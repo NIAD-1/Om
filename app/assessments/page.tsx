@@ -11,7 +11,9 @@ import {
     ChevronRight,
     BookOpen,
     Target,
-    Loader2
+    Loader2,
+    Plus,
+    Sparkles
 } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
 import { getCurricula } from '@/lib/firestore';
@@ -106,9 +108,18 @@ export default function AssessmentsPage() {
         <DashboardLayout>
             <div className="max-w-4xl mx-auto space-y-8">
                 {/* Header */}
-                <div>
-                    <h1 className="text-3xl font-bold text-white mb-2">Assessments</h1>
-                    <p className="text-slate-400">Test your knowledge with quizzes and exams</p>
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h1 className="text-3xl font-bold text-white mb-2">Assessments</h1>
+                        <p className="text-slate-400">Test your knowledge with quizzes and exams</p>
+                    </div>
+                    <button
+                        onClick={() => router.push('/assessments/generate')}
+                        className="px-4 py-2 rounded-lg bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white font-medium flex items-center gap-2"
+                    >
+                        <Sparkles className="h-5 w-5" />
+                        Generate New
+                    </button>
                 </div>
 
                 {/* Stats */}
@@ -192,8 +203,8 @@ export default function AssessmentsPage() {
                                     className="w-full flex items-center gap-4 p-4 rounded-lg bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700/50 hover:border-slate-600 transition-colors text-left"
                                 >
                                     <div className={`p-2 rounded-lg ${assessment.type === 'quiz'
-                                            ? 'bg-blue-500/20 text-blue-400'
-                                            : 'bg-purple-500/20 text-purple-400'
+                                        ? 'bg-blue-500/20 text-blue-400'
+                                        : 'bg-purple-500/20 text-purple-400'
                                         }`}>
                                         {assessment.type === 'quiz' ? (
                                             <Target className="h-5 w-5" />
@@ -204,8 +215,8 @@ export default function AssessmentsPage() {
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center gap-2 mb-1">
                                             <span className={`text-xs px-2 py-0.5 rounded-full ${assessment.type === 'quiz'
-                                                    ? 'bg-blue-500/20 text-blue-400'
-                                                    : 'bg-purple-500/20 text-purple-400'
+                                                ? 'bg-blue-500/20 text-blue-400'
+                                                : 'bg-purple-500/20 text-purple-400'
                                                 }`}>
                                                 {assessment.type.toUpperCase()}
                                             </span>

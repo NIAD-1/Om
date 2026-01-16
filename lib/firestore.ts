@@ -100,6 +100,12 @@ export async function getProgress(userId: string, curriculumId: string): Promise
 
 // ====== USER PROFILE ======
 
+export interface UserInterests {
+    domains: string[];
+    subFields: string[];
+    customFields: string[];
+}
+
 export async function saveUserProfile(userId: string, profile: { email: string; displayName?: string }) {
     const docRef = doc(db, 'users', userId);
     await setDoc(docRef, {
@@ -107,6 +113,33 @@ export async function saveUserProfile(userId: string, profile: { email: string; 
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
     }, { merge: true });
+}
+
+export async function saveUserInterests(userId: string, interests: UserInterests) {
+    const docRef = doc(db, 'users', userId);
+    await setDoc(docRef, {
+        interests,
+        hasCompletedOnboarding: true,
+        updatedAt: new Date().toISOString(),
+    }, { merge: true });
+}
+
+export async function getUserInterests(userId: string): Promise<UserInterests | null> {
+    const docRef = doc(db, 'users', userId);
+    const snapshot = await getDoc(docRef);
+    if (snapshot.exists()) {
+        return snapshot.data().interests || null;
+    }
+    return null;
+}
+
+export async function hasCompletedOnboarding(userId: string): Promise<boolean> {
+    const docRef = doc(db, 'users', userId);
+    const snapshot = await getDoc(docRef);
+    if (snapshot.exists()) {
+        return snapshot.data().hasCompletedOnboarding || false;
+    }
+    return false;
 }
 
 // ====== CHALLENGES ======
