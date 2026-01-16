@@ -109,34 +109,25 @@ export default function DomainPage() {
         loadContent();
     }, [user, domainId]);
 
-    // Fetch news (simulated for now - can integrate real news API)
+    // Fetch news from API
     useEffect(() => {
         const fetchNews = async () => {
             setLoadingNews(true);
-            // TODO: Integrate with real news API (NewsAPI, etc.)
-            // For now, show placeholder based on domain
-            const mockNews: NewsArticle[] = [
-                {
-                    title: `Latest ${domain?.name || 'Tech'} Trends for 2024`,
-                    description: 'Discover the most impactful developments shaping the industry this year.',
-                    url: '#',
-                    source: 'Tech News',
-                    publishedAt: new Date().toISOString()
-                },
-                {
-                    title: `How AI is Transforming ${domain?.name || 'Technology'}`,
-                    description: 'Artificial intelligence continues to revolutionize every sector.',
-                    url: '#',
-                    source: 'AI Weekly',
-                    publishedAt: new Date().toISOString()
-                },
-            ];
-            setNews(mockNews);
-            setLoadingNews(false);
+            try {
+                const response = await fetch(`/api/domain-news?domain=${domainId}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    setNews(data.articles || []);
+                }
+            } catch (e) {
+                console.error('Failed to fetch news', e);
+            } finally {
+                setLoadingNews(false);
+            }
         };
 
         fetchNews();
-    }, [domain]);
+    }, [domainId]);
 
     if (!domain) {
         return (

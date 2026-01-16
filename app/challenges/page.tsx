@@ -121,7 +121,7 @@ export default function ChallengesPage() {
         <DashboardLayout>
             <div className="max-w-6xl mx-auto space-y-8">
                 {/* Header */}
-                <div>
+                <div id="challenges-header">
                     <h1 className="text-3xl font-bold text-white mb-2">Coding Challenges</h1>
                     <p className="text-slate-400">Practice daily to improve your coding skills</p>
                 </div>

@@ -40,7 +40,7 @@ export default function SettingsPage() {
         <DashboardLayout>
             <div className="max-w-3xl mx-auto space-y-8">
                 {/* Header */}
-                <div>
+                <div id="settings-page-header">
                     <h1 className="text-3xl font-bold text-white mb-2">Settings</h1>
                     <p className="text-slate-400">Manage your account and preferences</p>
                 </div>

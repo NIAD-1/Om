@@ -99,7 +99,7 @@ export default function ProgressPage() {
         <DashboardLayout>
             <div className="max-w-4xl mx-auto space-y-8">
                 {/* Header */}
-                <div>
+                <div id="progress-page-header">
                     <h1 className="text-3xl font-bold text-white mb-2">Progress Tracking</h1>
                     <p className="text-slate-400">Your learning journey at a glance</p>
                 </div>
@@ -202,8 +202,8 @@ export default function ProgressPage() {
                                                     className="flex items-center gap-3 p-3 rounded-lg bg-slate-800/50 border border-slate-700/50 hover:border-slate-600 transition-colors"
                                                 >
                                                     <div className={`p-2 rounded-lg ${activity.type === 'video_watch' ? 'bg-blue-500/20 text-blue-400' :
-                                                            activity.type === 'lesson_complete' ? 'bg-green-500/20 text-green-400' :
-                                                                'bg-purple-500/20 text-purple-400'
+                                                        activity.type === 'lesson_complete' ? 'bg-green-500/20 text-green-400' :
+                                                            'bg-purple-500/20 text-purple-400'
                                                         }`}>
                                                         <IconComponent className="h-4 w-4" />
                                                     </div>

@@ -20,66 +20,110 @@ interface TourStep {
 }
 
 const tourSteps: TourStep[] = [
-    // Dashboard steps
+    // === DASHBOARD (Steps 1-5) ===
     {
         page: '/dashboard',
         elementId: 'dashboard-welcome',
-        title: 'Welcome!',
-        description: 'This is your learning dashboard. Here you can see your progress and create new learning paths.',
+        title: '👋 Welcome to Mastery Engine!',
+        description: 'Your personalized learning command center. Let\'s take a quick tour!',
         position: 'bottom'
     },
     {
         page: '/dashboard',
         elementId: 'progress-overview',
-        title: 'Your Progress',
-        description: 'Track your learning streak, lessons completed this week, and topics mastered.',
+        title: '📊 Track Your Progress',
+        description: 'See your streak, lessons completed this week, and total learning time.',
         position: 'bottom'
     },
     {
         page: '/dashboard',
         elementId: 'new-track-input',
-        title: 'Create Learning Path',
-        description: 'Type any topic here and click Generate to create an AI-powered curriculum instantly!',
+        title: '🚀 Generate Learning Paths',
+        description: 'Type any topic (e.g., "Machine Learning") and AI creates a complete curriculum!',
         position: 'top'
     },
     {
         page: '/dashboard',
         elementId: 'domain-grid',
-        title: 'Knowledge Domains',
-        description: 'Browse by category to see your learning paths organized by topic.',
+        title: '🎯 Knowledge Domains',
+        description: 'Click any domain to explore roadmaps, learning paths, and latest news.',
         position: 'top'
     },
-    // Learning Paths page
+
+    // === LEARNING PATHS (Steps 5-8) ===
     {
         page: '/learning-paths',
         elementId: 'learning-paths-header',
-        title: 'Your Learning Paths',
-        description: 'All your generated curricula appear here. Click any card to start learning!',
+        title: '📚 Your Learning Paths',
+        description: 'All your AI-generated curricula appear here. Each one contains modules, topics, and lessons.',
         position: 'bottom'
     },
-    // Roadmaps page
+
+    // === ROADMAPS (Steps 9-14) ===
     {
         page: '/roadmaps',
         elementId: 'roadmaps-header',
-        title: 'Career Roadmaps',
-        description: 'Roadmaps combine multiple learning paths into a complete career journey.',
+        title: '🗺️ Career Roadmaps',
+        description: 'Roadmaps combine multiple curricula into a structured career path.',
         position: 'bottom'
     },
     {
         page: '/roadmaps/create',
         elementId: 'create-roadmap-options',
-        title: 'Three Ways to Create',
-        description: 'Generate with AI, import from YouTube, or create manually with ChatGPT help.',
+        title: '✨ Three Ways to Create',
+        description: '1) AI Generate 2) YouTube Import 3) Manual JSON with ChatGPT',
         position: 'bottom'
     },
-    // Manual creation
     {
         page: '/roadmaps/create/manual',
         elementId: 'chatgpt-prompt-section',
-        title: 'AI Prompt Template',
-        description: 'Copy this prompt, paste in ChatGPT or Gemini with your topic, paste the result below!',
+        title: '🤖 Use ChatGPT/Gemini',
+        description: 'Copy this university-grade prompt, paste in ChatGPT, then paste the JSON result below!',
         position: 'bottom'
-    }
+    },
+
+    // === CHALLENGES (Steps 15-16) ===
+    {
+        page: '/challenges',
+        elementId: 'challenges-header',
+        title: '🏆 Daily Challenges',
+        description: 'Set personal learning goals and track them here. Add new challenges anytime!',
+        position: 'bottom'
+    },
+
+    // === ASSESSMENTS (Steps 17-19) ===
+    {
+        page: '/assessments',
+        elementId: 'assessments-header',
+        title: '📝 Assessments',
+        description: 'Take quizzes and exams from your curricula, or generate new ones on any topic!',
+        position: 'bottom'
+    },
+    {
+        page: '/assessments/generate',
+        elementId: 'assessment-generator',
+        title: '🎲 Generate Random Quizzes',
+        description: 'Enter any topic, choose difficulty, and AI creates a custom quiz instantly.',
+        position: 'bottom'
+    },
+
+    // === PROGRESS (Steps 20-21) ===
+    {
+        page: '/progress',
+        elementId: 'progress-page-header',
+        title: '📈 Detailed Progress',
+        description: 'See your complete learning history, time spent, and achievements.',
+        position: 'bottom'
+    },
+
+    // === SETTINGS (Steps 22-24) ===
+    {
+        page: '/settings',
+        elementId: 'settings-page-header',
+        title: '⚙️ Settings',
+        description: 'Manage your account, preferences, and reset this tutorial anytime!',
+        position: 'bottom'
+    },
 ];
 
 interface InteractiveTourProps {
