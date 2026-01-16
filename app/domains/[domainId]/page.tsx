@@ -79,6 +79,7 @@ export default function DomainPage() {
     const [papers, setPapers] = useState<ResearchPaper[]>([]);
     const [loading, setLoading] = useState(true);
     const [loadingNews, setLoadingNews] = useState(true);
+    const [loadingPapers, setLoadingPapers] = useState(true);
 
     // Featured content
     const [featured, setFeatured] = useState<{ curricula: FeaturedCurriculum[], roadmaps: FeaturedRoadmap[] }>({ curricula: [], roadmaps: [] });
@@ -139,6 +140,26 @@ export default function DomainPage() {
         };
 
         fetchNews();
+    }, [domainId]);
+
+    // Fetch research papers from arXiv API
+    useEffect(() => {
+        const fetchPapers = async () => {
+            setLoadingPapers(true);
+            try {
+                const response = await fetch(`/api/research-papers?domain=${domainId}&max=4`);
+                if (response.ok) {
+                    const data = await response.json();
+                    setPapers(data.papers || []);
+                }
+            } catch (e) {
+                console.error('Failed to fetch papers', e);
+            } finally {
+                setLoadingPapers(false);
+            }
+        };
+
+        fetchPapers();
     }, [domainId]);
 
     if (!domain) {
@@ -392,19 +413,52 @@ export default function DomainPage() {
                             transition={{ delay: 0.4 }}
                             className="card"
                         >
-                            <div className="flex items-center gap-2 mb-4">
-                                <FileText className="h-5 w-5 text-green-400" />
-                                <h2 className="text-lg font-semibold text-white">Research</h2>
+                            <div className="flex items-center justify-between mb-4">
+                                <div className="flex items-center gap-2">
+                                    <FileText className="h-5 w-5 text-green-400" />
+                                    <h2 className="text-lg font-semibold text-white">Research Papers</h2>
+                                </div>
+                                <a
+                                    href={`https://arxiv.org/search/?query=${encodeURIComponent(domain?.name || 'technology')}&searchtype=all`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-xs text-green-400 hover:text-green-300"
+                                >
+                                    View on arXiv →
+                                </a>
                             </div>
 
-                            <div className="text-center py-4">
-                                <p className="text-sm text-slate-400">
-                                    Research papers coming soon
-                                </p>
-                                <p className="text-xs text-slate-500 mt-1">
-                                    via arXiv, Semantic Scholar
-                                </p>
-                            </div>
+                            {loadingPapers ? (
+                                <div className="flex justify-center py-4">
+                                    <Loader2 className="h-5 w-5 animate-spin text-green-500" />
+                                </div>
+                            ) : papers.length === 0 ? (
+                                <div className="text-center py-4">
+                                    <p className="text-sm text-slate-400">No papers found</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-3">
+                                    {papers.map((paper: any, idx: number) => (
+                                        <a
+                                            key={idx}
+                                            href={paper.pdfUrl || paper.url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                openReader(paper.pdfUrl || paper.url, paper.title, 'pdf');
+                                            }}
+                                            className="block p-3 rounded-lg bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700 hover:border-green-500/30 transition-colors cursor-pointer"
+                                        >
+                                            <h4 className="text-sm font-medium text-white line-clamp-2">{paper.title}</h4>
+                                            <p className="text-xs text-slate-500 mt-1">
+                                                {paper.authors?.join(', ') || 'Unknown authors'}
+                                            </p>
+                                            <p className="text-xs text-slate-400 mt-1 line-clamp-2">{paper.summary}</p>
+                                        </a>
+                                    ))}
+                                </div>
+                            )}
                         </motion.div>
                     </div>
                 </div>
